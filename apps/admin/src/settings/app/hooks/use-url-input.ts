@@ -31,6 +31,10 @@ const useUrlInput = ({baseUrl, nullable, transformPathWithoutSlash, value, onCha
         if (urls.save !== value) {
             onChange(urls.save);
         }
+
+        // Returned so a caller acting in the same event (e.g. Enter to submit)
+        // can use the committed value without waiting for the state to flush
+        return urls.save;
     }, [baseUrl, displayValue, nullable, onChange, transformPathWithoutSlash, value]);
 
     const handleFocus = useCallback((event: FocusEvent<HTMLInputElement>) => {
