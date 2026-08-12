@@ -7,9 +7,7 @@ vi.mock('@tryghost/admin-x-framework/api/config', () => ({
     useBrowseConfig: () => ({
         data: {
             config: {
-                labs: {
-                    importMemberTier: true
-                }
+                labs: {}
             }
         }
     })
@@ -288,7 +286,7 @@ describe('ImportMembersModal', () => {
         expect(await screen.findByText('Some rows could not be imported.')).toBeInTheDocument();
     });
 
-    it('shows tier as a mapped field when importMemberTier is enabled', async () => {
+    it('shows tier as a mapped field', async () => {
         mockCsvContents = 'email,import_tier\nmember@example.com,Gold';
 
         renderModal();
