@@ -1,7 +1,7 @@
 import {useModal} from '@ebay/nice-modal-react';
 import {cva} from 'class-variance-authority';
 import {X} from 'lucide-react';
-import React, {forwardRef, useEffect, useState} from 'react';
+import React, {forwardRef, useEffect, useLayoutEffect, useRef, useState} from 'react';
 
 import {Button, type ButtonProps} from '@/components/ui/button';
 import {LoadingIndicator} from '@/components/ui/loading-indicator';
@@ -171,8 +171,19 @@ const SettingsModalContent = forwardRef<HTMLElement, SettingsModalContentProps>(
         setGlobalDirtyState(dirty);
     }, [dirty, setGlobalDirtyState]);
 
+    // Inputs that commit on blur (URL fields) flush their value into state a
+    // tick after the triggering event. The keyboard save/close paths below
+    // blur first and defer their action, so they must read the latest props
+    // through refs — their own closures predate the commit.
+    const dirtyRef = useRef(dirty);
+    const onOkRef = useRef(onOk);
+    useLayoutEffect(() => {
+        dirtyRef.current = dirty;
+        onOkRef.current = onOk;
+    });
+
     const removeModal = () => {
-        confirm(dirty, () => {
+        confirm(dirtyRef.current, () => {
             requestClose();
             afterClose?.();
         });
@@ -201,11 +212,15 @@ const SettingsModalContent = forwardRef<HTMLElement, SettingsModalContentProps>(
                     activeElement.blur();
                 }
 
-                if (onCancel) {
-                    onCancel();
-                } else {
-                    removeModal();
-                }
+                // The blur may commit an in-progress edit; give React a tick
+                // to process it so the dirty check sees the committed value
+                setTimeout(() => {
+                    if (onCancel) {
+                        onCancel();
+                    } else {
+                        removeModal();
+                    }
+                });
             });
         };
 
@@ -226,7 +241,14 @@ const SettingsModalContent = forwardRef<HTMLElement, SettingsModalContentProps>(
         const handleCMDS = (event: KeyboardEvent) => {
             if ((event.metaKey || event.ctrlKey) && event.key === 's') {
                 event.preventDefault();
-                onOk();
+
+                // Flush any in-progress edit before saving: blur commits it,
+                // and the deferred call reads the post-commit onOk via the ref
+                // — the closure here predates the commit
+                if (document.activeElement instanceof HTMLElement) {
+                    document.activeElement.blur();
+                }
+                setTimeout(() => onOkRef.current?.());
             }
         };
 
