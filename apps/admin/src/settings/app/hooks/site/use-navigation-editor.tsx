@@ -10,12 +10,12 @@ export type NavigationItem = {
 export type NavigationItemErrors = { [key in keyof NavigationItem]?: string }
 export type EditableItem = NavigationItem & { id: string; errors: NavigationItemErrors }
 
-const hasNewItem = (newItem: NavigationItem) => Boolean((newItem.label && !newItem.label.match(/^\s*$/)) || newItem.url !== '/');
+const hasNewItem = (newItem: NavigationItem) => Boolean((newItem.label && !newItem.label.match(/^\s*$/)) || newItem.url);
 
 export type NavigationEditor = {
     items: EditableItem[]
     updateItem: (id: string, item: Partial<NavigationItem>) => void
-    addItem: () => void
+    addItem: (overrides?: Partial<NavigationItem>) => void
     removeItem: (id: string) => void
     moveItem: (activeId: string, overId?: string) => void
     newItem: EditableItem
@@ -36,7 +36,9 @@ const useNavigationEditor = ({items, setItems}: {
     const list = useSortableIndexedList<Omit<EditableItem, 'id'>>({
         items: editableItems,
         setItems: setNavigationItems,
-        blank: {url: '/',label: '', errors: {}},
+        // Blank rather than '/' so the URL field starts empty and the suggestion
+        // dropdown is the obvious way in, instead of prefilling the site root
+        blank: {url: '', label: '', errors: {}},
         canAddNewItem: hasNewItem
     });
 
@@ -61,13 +63,17 @@ const useNavigationEditor = ({items, setItems}: {
         list.updateItem(id, {...currentItem.item, ...item});
     };
 
-    const addItem = () => {
-        const errors = validateItem(list.newItem);
+    // `overrides` let a caller submit a value it has just committed but which
+    // hasn't flushed into `list.newItem` yet — pressing Enter in the URL field
+    // commits and adds within a single event.
+    const addItem = (overrides?: Partial<NavigationItem>) => {
+        const candidate = {...list.newItem, ...overrides};
+        const errors = validateItem(candidate);
 
         if (Object.values(errors).some(message => message)) {
-            list.setNewItem({...list.newItem, errors});
+            list.setNewItem({...candidate, errors});
         } else {
-            list.addItem();
+            list.addItem(overrides);
         }
     };
 

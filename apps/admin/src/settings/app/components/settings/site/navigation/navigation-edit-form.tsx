@@ -4,11 +4,13 @@ import {Button, SortableList} from '@tryghost/shade/components';
 import {Inline} from '@tryghost/shade/primitives';
 import {LucideIcon} from '@tryghost/shade/utils';
 import {type NavigationEditor} from '@/settings/app/hooks/site/use-navigation-editor';
+import {type NavigationLinkSuggestionGroup} from '@/settings/app/hooks/site/use-navigation-link-suggestions';
 
 const NavigationEditForm: React.FC<{
     baseUrl: string;
     navigation: NavigationEditor;
-}> = ({baseUrl, navigation}) => {
+    loadSuggestions: (term: string) => Promise<NavigationLinkSuggestionGroup[]>;
+}> = ({baseUrl, navigation, loadSuggestions}) => {
     return <div className="w-full pt-2">
         <SortableList
             dragHandleClass='translate-y-0.5'
@@ -21,6 +23,7 @@ const NavigationEditForm: React.FC<{
                     baseUrl={baseUrl}
                     clearError={key => navigation.clearError(item.id, key)}
                     item={item}
+                    loadSuggestions={loadSuggestions}
                     updateItem={updates => navigation.updateItem(item.id, updates)}
                 />
             )}
@@ -31,7 +34,7 @@ const NavigationEditForm: React.FC<{
                 <LucideIcon.Plus className='size-4 text-muted-foreground' />
             </Inline>
             <NavigationItemEditor
-                action={<Button aria-label='Add navigation item' data-testid="add-button" size='icon' type='button' variant='ghost' onClick={navigation.addItem}><LucideIcon.Plus /></Button>}
+                action={<Button aria-label='Add navigation item' data-testid="add-button" size='icon' type='button' variant='ghost' onClick={() => navigation.addItem()}><LucideIcon.Plus /></Button>}
                 addItem={navigation.addItem}
                 baseUrl={baseUrl}
                 className="mt-1"
@@ -39,6 +42,7 @@ const NavigationEditForm: React.FC<{
                 data-testid="new-navigation-item"
                 item={navigation.newItem}
                 labelPlaceholder="New item label"
+                loadSuggestions={loadSuggestions}
                 updateItem={navigation.setNewItem}
             />
         </Inline>

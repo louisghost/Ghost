@@ -1,5 +1,6 @@
 import NavigationEditForm from './navigation/navigation-edit-form';
 import useNavigationEditor, {type NavigationItem} from '@/settings/app/hooks/site/use-navigation-editor';
+import useNavigationLinkSuggestions from '@/settings/app/hooks/site/use-navigation-link-suggestions';
 import useSettingGroup from '@/settings/app/hooks/use-setting-group';
 import {SettingsModal} from '@tryghost/shade/patterns';
 import {Tabs, TabsContent, TabsList, TabsTrigger} from '@tryghost/shade/components';
@@ -40,6 +41,9 @@ function NavigationModal() {
         setItems: setSecondaryNavigationItems
     });
 
+    // Shared across both tabs so the search-index responses are only fetched once
+    const {loadSuggestions} = useNavigationLinkSuggestions();
+
     const [selectedTab, setSelectedTab] = useState('primary-nav');
 
     return (
@@ -69,8 +73,8 @@ function NavigationModal() {
                         <TabsTrigger value='primary-nav'>Primary</TabsTrigger>
                         <TabsTrigger value='secondary-nav'>Secondary</TabsTrigger>
                     </TabsList>
-                    <TabsContent value='primary-nav'><NavigationEditForm baseUrl={siteData!.url} navigation={navigation} /></TabsContent>
-                    <TabsContent value='secondary-nav'><NavigationEditForm baseUrl={siteData!.url} navigation={secondaryNavigation} /></TabsContent>
+                    <TabsContent value='primary-nav'><NavigationEditForm baseUrl={siteData!.url} loadSuggestions={loadSuggestions} navigation={navigation} /></TabsContent>
+                    <TabsContent value='secondary-nav'><NavigationEditForm baseUrl={siteData!.url} loadSuggestions={loadSuggestions} navigation={secondaryNavigation} /></TabsContent>
                 </Tabs>
             </div>
         </SettingsModal>

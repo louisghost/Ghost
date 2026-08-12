@@ -1,31 +1,25 @@
 import React, {type ReactNode} from 'react';
+import UrlSuggestionInput from './url-suggestion-input';
 import clsx from 'clsx';
-import useUrlInput from '@/settings/app/hooks/use-url-input';
 import {type EditableItem, type NavigationItem, type NavigationItemErrors} from '@/settings/app/hooks/site/use-navigation-editor';
 import {Field, FieldError, FieldLabel, Input} from '@tryghost/shade/components';
 import {Inline} from '@tryghost/shade/primitives';
-import {formatUrl} from '@/settings/app/utils/format-url';
+import {type NavigationLinkSuggestionGroup} from '@/settings/app/hooks/site/use-navigation-link-suggestions';
 
 export type NavigationItemEditorProps = React.HTMLAttributes<HTMLDivElement> & {
     baseUrl: string;
     item: EditableItem;
+    loadSuggestions: (term: string) => Promise<NavigationLinkSuggestionGroup[]>;
     clearError?: (key: keyof NavigationItemErrors) => void;
     updateItem?: (item: Partial<NavigationItem>) => void;
     labelPlaceholder?: string
     unstyled?: boolean
     textFieldClasses?: string
     action?: ReactNode
-    addItem?: () => void
+    addItem?: (overrides?: Partial<NavigationItem>) => void
 }
 
-const NavigationItemEditor: React.FC<NavigationItemEditorProps> = ({baseUrl, item, updateItem, addItem, clearError, labelPlaceholder, unstyled, textFieldClasses, action, className, ...props}) => {
-    const urlInput = useUrlInput({
-        baseUrl,
-        nullable: true,
-        value: item.url,
-        onChange: value => updateItem?.({url: value || ''})
-    });
-
+const NavigationItemEditor: React.FC<NavigationItemEditorProps> = ({baseUrl, item, loadSuggestions, updateItem, addItem, clearError, labelPlaceholder, unstyled, textFieldClasses, action, className, ...props}) => {
     return (
         <div className={clsx('flex w-full items-start gap-3', className)} data-testid='navigation-item-editor' {...props}>
             <div className="flex flex-1 pt-1">
@@ -52,29 +46,19 @@ const NavigationItemEditor: React.FC<NavigationItemEditorProps> = ({baseUrl, ite
             </div>
             <Field className='flex-1 pt-1' data-invalid={Boolean(item.errors.url) || undefined}>
                 <FieldLabel className='sr-only' htmlFor={`navigation-url-${item.id}`}>URL</FieldLabel>
-                <Input
+                <UrlSuggestionInput
                     aria-invalid={Boolean(item.errors.url) || undefined}
+                    baseUrl={baseUrl}
                     className={textFieldClasses}
                     id={`navigation-url-${item.id}`}
-                    value={urlInput.displayValue}
-                    onBlur={urlInput.commitValue}
-                    onChange={event => urlInput.setDisplayValue(event.target.value)}
-                    onFocus={urlInput.handleFocus}
-                    onKeyDown={(e) => {
-                        urlInput.handleKeyDown(e);
-                        const urls = formatUrl((e.target as HTMLInputElement).value, baseUrl, true);
-                        updateItem?.({url: urls.save || ''});
-                    }}
-                    onKeyUp={(e) => {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            const urls = formatUrl((e.target as HTMLInputElement).value, baseUrl, true);
-                            updateItem?.({url: urls.save || ''});
-                            addItem?.();
-                        }
+                    loadSuggestions={loadSuggestions}
+                    value={item.url}
+                    onChange={url => updateItem?.({url})}
+                    onEdit={() => {
                         // eslint-disable-next-line @typescript-eslint/no-unused-expressions
                         !!item.errors.url && clearError?.('url');
                     }}
+                    onSubmit={url => addItem?.({url})}
                 />
                 {item.errors.url && <FieldError>{item.errors.url}</FieldError>}
             </Field>
