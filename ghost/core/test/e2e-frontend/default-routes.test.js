@@ -299,8 +299,8 @@ describe('Default Frontend routing', function () {
         // AMP is no longer supported as of v6.0, so we only check the case in which it's disabled
         describe('AMP Disabled', function () {
             it('/amp/ should redirect to regular post, including any query params', async function () {
-                await request.get('/welcome/amp/?q=a')
-                    .expect('Location', '/welcome/?q=a')
+                await request.get('/welcome/amp/?ref=a')
+                    .expect('Location', '/welcome/?ref=a')
                     .expect(301)
                     .expect(assertCorrectFrontendHeaders);
             });

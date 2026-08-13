@@ -242,10 +242,10 @@ describe('Front-end gift links', function () {
     });
 
     it('strips a malformed (non-string) ?gift param without looping', async function () {
-        // `?gift[]=x` parses to an array, not a token. It must canonicalise to
-        // the clean URL — not redirect to itself and loop.
+        // Repeated `gift` parameters parse to an array, not a token. They must
+        // canonicalise to the clean URL — not redirect to themselves and loop.
         const res = await request
-            .get(`/${slug}/?gift[]=x`)
+            .get(`/${slug}/?gift=x&gift=y`)
             .redirects(0)
             .expect(301);
 
