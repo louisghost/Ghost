@@ -3,7 +3,8 @@ const ObjectID = require('bson-objectid').default;
 const {
     createTransactionalMigration,
     combineTransactionalMigrations,
-    createRemovePermissionMigration
+    createRemovePermissionMigration,
+    removeRole
 } = require('../../utils');
 
 const INTEGRATION = {
@@ -87,45 +88,11 @@ const removeIntegration = createTransactionalMigration(
     }
 );
 
-const removeRole = createTransactionalMigration(
-    async function up(knex) {
-        const role = await knex('roles').select('id').where('name', ROLE.name).first();
-
-        if (!role) {
-            logging.warn(`Skipping removal of ${ROLE.name} role - it does not exist`);
-            return;
-        }
-
-        await knex('api_keys').where('role_id', role.id).del();
-        await knex('permissions_roles').where('role_id', role.id).del();
-        await knex('roles_users').where('role_id', role.id).del();
-        await knex('roles').where('id', role.id).del();
-        logging.info(`Removed ${ROLE.name} role`);
-    },
-    async function down(knex) {
-        const existing = await knex('roles').select('id').where('name', ROLE.name).first();
-
-        if (existing) {
-            logging.warn(`Skipping restore of ${ROLE.name} role - it already exists`);
-            return;
-        }
-
-        await knex('roles').insert({
-            id: new ObjectID().toHexString(),
-            ...ROLE,
-            created_at: knex.raw('CURRENT_TIMESTAMP'),
-            updated_at: knex.raw('CURRENT_TIMESTAMP')
-        });
-
-        logging.info(`Restored ${ROLE.name} role`);
-    }
-);
-
 // Down migrations run in reverse, so the role is restored before the permission that has
 // to be linked back to it
 module.exports = combineTransactionalMigrations(
     removeDirectUserGrants,
     createRemovePermissionMigration(PERMISSION, PERMISSION_ROLES),
     removeIntegration,
-    removeRole
+    removeRole(ROLE)
 );
