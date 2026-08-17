@@ -1,14 +1,10 @@
 import {Field, FieldDescription, FieldLabel, Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@tryghost/shade/components';
 import {type User, isOwnerUser} from '@tryghost/admin-x-framework/api/users';
 import {useBrowseRoles} from '@tryghost/admin-x-framework/api/roles';
-import {useGlobalData} from '@/settings/app/components/providers/global-data-provider';
 
 const RoleSelector: React.FC<{ user: User; setUserData: (user: User) => void; }> = ({user, setUserData}) => {
     const {data: {roles} = {}} = useBrowseRoles();
-    const {config} = useGlobalData();
-    const editorBeta = config.labs.superEditors;
-
-    let optionsArray = [
+    const optionsArray = [
         {
             hint: 'Can write and edit their own posts, but cannot publish them.',
             label: 'Contributor',
@@ -20,9 +16,9 @@ const RoleSelector: React.FC<{ user: User; setUserData: (user: User) => void; }>
             value: 'author'
         },
         {
-            hint: 'Can edit and publish any posts, and manage Authors and Contributors.',
+            hint: 'Can invite and manage other Authors and Contributors, as well as edit and publish any posts on the site. Can manage members and moderate comments.',
             label: 'Editor',
-            value: 'editor'
+            value: 'super editor'
         },
         {
             hint: 'Trusted user who has full access to all content, settings, and user management.',
@@ -30,21 +26,6 @@ const RoleSelector: React.FC<{ user: User; setUserData: (user: User) => void; }>
             value: 'administrator'
         }
     ];
-    // if the editor beta is enabled, replace the editor role with super editor
-    if (editorBeta) {
-        optionsArray = optionsArray.map((option) => {
-            if (option.value === 'editor') {
-                return {
-                    ...option,
-                    label: 'Editor (beta mode)',
-                    value: 'super editor',
-                    hint: 'Can invite and manage other Authors and Contributors, as well as edit and publish any posts on the site. Can manage members and moderate comments.'
-                };
-            }
-            return option;
-        });
-    }
-
     if (isOwnerUser(user)) {
         const ownerOption = {
             label: 'Owner',
@@ -67,7 +48,7 @@ const RoleSelector: React.FC<{ user: User; setUserData: (user: User) => void; }>
     }
 
     const selectedRoleValue = user.roles[0].name.toLowerCase();
-    const selectedRoleLabel = optionsArray.find(option => option.value.toLowerCase() === selectedRoleValue)?.label;
+    const selectedRoleLabel = optionsArray.find(option => option.value === selectedRoleValue)?.label ?? user.roles[0].name;
 
     return (
         <Field>

@@ -9,7 +9,6 @@ import {useAddInvite, useBrowseInvites} from '@tryghost/admin-x-framework/api/in
 import {useBrowseRoles} from '@tryghost/admin-x-framework/api/roles';
 import {useBrowseUsers} from '@tryghost/admin-x-framework/api/users';
 import {useEffect, useState} from 'react';
-import {useGlobalData} from '@/settings/app/components/providers/global-data-provider';
 import {useHandleError} from '@tryghost/admin-x-framework/hooks';
 import {useSettingsNavigation} from '@/settings/app/hooks/use-settings-navigation';
 
@@ -26,8 +25,6 @@ function InviteUserModal() {
     const limiter = useLimiter();
 
     const {updateRoute} = useSettingsNavigation();
-    const {config} = useGlobalData();
-    const editorBeta = config.labs.superEditors;
     const [email, setEmail] = useState<string>('');
     const [saveState, setSaveState] = useState<'saving' | 'saved' | 'error' | ''>('');
     const [role, setRole] = useState<RoleType>('contributor');
@@ -151,7 +148,7 @@ function InviteUserModal() {
         }
     };
 
-    const roleOptions = [
+    const roleOptions: {hint: string; label: string; value: RoleType}[] = [
         {
             hint: 'Can create and edit their own posts, but cannot publish. An Editor needs to approve and publish for them.',
             label: 'Contributor',
@@ -163,9 +160,9 @@ function InviteUserModal() {
             value: 'author'
         },
         {
-            hint: 'Can invite and manage other Authors and Contributors, as well as edit and publish any posts on the site.',
+            hint: 'Can invite and manage other Authors and Contributors, as well as edit and publish any posts on the site. Can manage members and moderate comments.',
             label: 'Editor',
-            value: 'editor'
+            value: 'super editor'
         },
         {
             hint: 'Trusted staff user who should be able to manage all content and users, as well as site settings and options.',
@@ -174,23 +171,8 @@ function InviteUserModal() {
         }
     ];
 
-    // If the editor beta is enabled, replace the editor role option with super editor options.
-    // This gets a little weird, because we aren't changing what is actually assigned based on the toggle.
-    // So, a site could have the editor beta enabled, but that doesn't automatically convert their editors.
-    // (Editors can be up/downgraded by reassigning them in this modal.  For 6.0, we should decide whether
-    // the old editors are going away or whether both roles are staying, and tidy this up then.)
-
-    if (editorBeta) {
-        roleOptions[2] = {
-            hint: 'Can invite and manage other Authors and Contributors, as well as edit and publish any posts on the site. Can manage members and moderate comments.',
-            label: 'Editor (beta mode)',
-            value: 'super editor'
-        };
-    };
     const allowedRoleOptions = roleOptions.filter((option) => {
-        return assignableRoles.some((r) => {
-            return r.name === option.label || (r.name === 'Super Editor' && option.label === 'Editor (beta mode)');
-        });
+        return assignableRoles.some(r => r.name.toLowerCase() === option.value);
     });
 
     if (errors.email) {
