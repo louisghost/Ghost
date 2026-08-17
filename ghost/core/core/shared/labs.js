@@ -48,7 +48,6 @@ const PRIVATE_FEATURES = [
     'adminUIRefresh',
     'tagsX',
     'emailUniqueid',
-    'themeTranslation',
     'pictureImageFormats',
     'getHelperDeduplication',
     'membersCustomFields',

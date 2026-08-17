@@ -44,10 +44,6 @@ const features: Feature[] = [{
     description: 'Enables {uniqueid} variable in emails for unique image URLs to bypass ESP image caching',
     flag: 'emailUniqueid'
 }, {
-    title: 'Updated theme translation (beta)',
-    description: 'Enable theme translation using i18next instead of the old translation package.',
-    flag: 'themeTranslation'
-}, {
     title: 'Picture Element',
     description: 'Use the HTML picture element to serve modern image formats (AVIF, WebP) with automatic fallbacks',
     flag: 'pictureImageFormats'
