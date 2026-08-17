@@ -1,3 +1,11 @@
+import {getInstance} from './index';
+import MediaInlinerJob from '../media-inliner/media-inliner-job';
+
 export default function registerJobHandlers(): void {
-    // Job handlers are registered here as jobs migrate onto the class-based service.
+    const jobsService = getInstance();
+    const mediaInlinerService = require('../media-inliner');
+
+    jobsService.handle(MediaInlinerJob, async (job: MediaInlinerJob) => {
+        await mediaInlinerService.inline(job.domains);
+    });
 }
