@@ -123,12 +123,18 @@ const CUSTOM_FIELD: FieldDescriptor = {
     }
 };
 
-/** Every field a member can be filtered by. */
-export const memberFields = buildCatalogue([
+/**
+ * Every field Ghost itself declares, including the two parameterised entries that answer for
+ * any newsletter and any custom field. A site's own definitions layer more precise entries
+ * over these — see member-filter-catalogue.ts — but these alone can read any filter.
+ */
+export const MEMBER_FIELD_DESCRIPTORS: FieldDescriptor[] = [
     ...MEMBER_FIELDS.map(withRelativeOperators),
     NEWSLETTER_FIELD,
     CUSTOM_FIELD
-]);
+];
+
+export const memberFields = buildCatalogue(MEMBER_FIELD_DESCRIPTORS);
 
 export type MemberFields = typeof memberFields;
 

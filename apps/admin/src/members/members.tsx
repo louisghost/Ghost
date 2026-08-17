@@ -19,6 +19,9 @@ import {getSiteTimezone} from '@tryghost/admin-x-framework/utils/get-site-timezo
 import {shouldDelayMembersDateFilterHydration, useMembersFilterState} from './hooks/use-members-filter-state';
 import {useActiveMemberView, useMemberViews} from './hooks/use-member-views';
 import {useBrowseConfig} from '@tryghost/admin-x-framework/api/config';
+import {useFeatureFlag} from '@tryghost/admin-x-framework/hooks';
+import {useBrowseMemberCustomFieldsIncludingArchived} from '@tryghost/admin-x-framework/api/member-custom-fields';
+import {useBrowseNewsletters} from '@tryghost/admin-x-framework/api/newsletters';
 import {useBrowseMembersInfinite} from '@tryghost/admin-x-framework/api/members';
 import {useDebouncedCallback} from 'use-debounce';
 import {useLocation, useSearchParams} from 'react-router';
@@ -44,7 +47,16 @@ const MembersPage: React.FC<MembersPageProps> = ({
     const setHeaderContentRef = useCallback((node: HTMLDivElement | null) => {
         headerRef.current = node?.closest('[data-list-page="header"]') as HTMLDivElement | null;
     }, []);
-    const {filters, nql, search, setFilters, setSearch, hasFilterOrSearch, clearAll} = useMembersFilterState(timezone);
+    // The filter catalogue needs each custom field's type to read its clauses as anything
+    // but text, so they are loaded here and handed down. Archived fields included: a saved
+    // segment may still name one, and it should keep reading as what it is.
+    const customFieldsEnabled = useFeatureFlag('membersCustomFields');
+    const {data: customFieldsData} = useBrowseMemberCustomFieldsIncludingArchived({enabled: customFieldsEnabled});
+    const customFields = customFieldsData?.members_custom_fields;
+    // Newsletters define fields too, so the catalogue needs them for the same reason.
+    const {data: newslettersData} = useBrowseNewsletters({searchParams: {limit: '100'}});
+    const newsletters = newslettersData?.newsletters;
+    const {filters, nql, search, setFilters, setSearch, hasFilterOrSearch, clearAll} = useMembersFilterState(timezone, newsletters, customFields);
     const location = useLocation();
     const savedViews = useMemberViews();
     const activeView = useActiveMemberView(savedViews, nql);

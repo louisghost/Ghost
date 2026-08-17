@@ -319,3 +319,53 @@ describe('useMembersFilterState', () => {
         expect(result.current.hasFilterOrSearch).toBe(false);
     });
 });
+
+describe('useMembersFilterState — waiting on a source it names', () => {
+    const CUSTOM_FIELD_FILTER = "(custom_fields.key:'company'+custom_fields.value:'Ghost')";
+
+    function renderWithSources(sources: {newsletters?: {slug: string, name: string}[], customFields?: {key: string, name: string, type: 'short_text'}[]}) {
+        return renderHook(() => {
+            const state = useMembersFilterState('UTC', sources.newsletters, sources.customFields);
+            const [searchParams] = useSearchParams();
+
+            return {...state, query: searchParams.toString()};
+        }, {
+            wrapper: createWrapper(`/?filter=${encodeURIComponent(CUSTOM_FIELD_FILTER)}`)
+        });
+    }
+
+    it('still reads and still queries while the definitions are in flight', async () => {
+        const {result} = renderWithSources({customFields: undefined});
+
+        await waitFor(() => {
+            expect(result.current.filters).toHaveLength(1);
+        });
+
+        expect(result.current.filters[0].field).toBe('custom_field.company');
+        expect(result.current.nql).toBe(CUSTOM_FIELD_FILTER);
+    });
+
+    it('leaves the URL alone until they arrive', async () => {
+        const {result} = renderWithSources({customFields: undefined});
+        const before = result.current.query;
+
+        await waitFor(() => {
+            expect(result.current.filters).toHaveLength(1);
+        });
+
+        expect(result.current.query).toBe(before);
+        expect(decodeURIComponent(result.current.query)).toContain("custom_fields.key:'company'");
+    });
+
+    it('reads and writes normally once they have', async () => {
+        const {result} = renderWithSources({customFields: [{key: 'company', name: 'Company', type: 'short_text'}]});
+
+        await waitFor(() => {
+            expect(result.current.filters).toHaveLength(1);
+        });
+
+        expect(result.current.filters[0].field).toBe('custom_field.company');
+        expect(result.current.nql).toBe(CUSTOM_FIELD_FILTER);
+        expect(decodeURIComponent(result.current.query)).toContain("custom_fields.key:'company'");
+    });
+});

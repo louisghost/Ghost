@@ -141,6 +141,22 @@ export class MemberDetailsPage extends AdminPage {
     }
 
     /**
+     * Set a composite custom field's value: one editor holding an input per part, each
+     * labelled by the part rather than the field. Keys are the part labels as shown,
+     * e.g. {'Address line 1': '1 King St', City: 'London'}.
+     */
+    async setAddressCustomFieldValue(fieldName: string, parts: Record<string, string>): Promise<void> {
+        await this.customFieldEditButton(fieldName).click();
+
+        for (const [label, value] of Object.entries(parts)) {
+            await this.customFieldModal.getByLabel(label, {exact: true}).fill(value);
+        }
+
+        await this.customFieldModal.getByRole('button', {name: 'Save', exact: true}).click();
+        await this.customFieldModal.waitFor({state: 'detached'});
+    }
+
+    /**
      * Removes a complimentary subscription from the first subscription row.
      * Removal always asks for confirmation first.
      */

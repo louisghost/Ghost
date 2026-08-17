@@ -1,4 +1,4 @@
-import {FIELD_TYPE_IDS, subFieldsOf, type FieldType, type PartsOf} from '@tryghost/custom-field-types';
+import {FIELD_TYPES, FIELD_TYPE_IDS, subFieldsOf, type FieldKind, type FieldType, type PartsOf} from '@tryghost/custom-field-types';
 import {csvColumnsForField} from '@tryghost/custom-field-types/csv';
 import {Meta, createMutation, createQuery, createQueryWithId} from '../utils/api/hooks';
 
@@ -11,6 +11,8 @@ export {isCustomFieldColumn} from '@tryghost/custom-field-types/csv';
 // catalog package — the framework is their surface for everything custom-fields.
 export type {Address as MemberCustomFieldAddress} from '@tryghost/custom-field-types';
 export {FIELD_TYPES as MEMBER_CUSTOM_FIELD_TYPES} from '@tryghost/custom-field-types';
+export {FIELD_KINDS as MEMBER_CUSTOM_FIELD_KINDS} from '@tryghost/custom-field-types';
+export type {FieldKind as MemberCustomFieldKind} from '@tryghost/custom-field-types';
 
 export type MemberCustomField = {
     // Fields are addressed by their immutable key; the DB id is never exposed.
@@ -159,6 +161,16 @@ export const memberCustomFieldParts = <T extends FieldType>(type: T): MemberCust
     const labels = partLabelsFor(type);
     return partKeys.map(key => ({key, label: labels[key]}));
 };
+
+/**
+ * What kind of value a field type holds — text, a date, a number, a record of parts.
+ *
+ * Exposed alongside the parts helper because admin needs it for the same reason: anything
+ * that compares or orders a value has to know which of those it is, without enumerating the
+ * types itself. Falls back to text for a type this build has never heard of, which is what
+ * an older admin talking to a newer server sees.
+ */
+export const memberCustomFieldKind = (type: FieldType): FieldKind => FIELD_TYPES[type]?.kind ?? 'text';
 
 export interface MemberCustomFieldsResponseType {
     meta?: Meta;

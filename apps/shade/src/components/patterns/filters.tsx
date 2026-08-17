@@ -936,6 +936,11 @@ export interface CustomRendererProps<T = unknown> {
     // depends on a choice made in the value area (e.g. a custom field whose type
     // is picked here) can own the operator control itself.
     onOperatorChange?: (operator: string) => void;
+    // Point the predicate at a different field, keeping its position in the row.
+    // Provided when the field opts into `renderFieldInValue`, for a renderer whose
+    // segments choose between fields rather than between values — a composite whose
+    // parts are fields in their own right, say.
+    onFieldChange?: (key: string) => void;
     // Render the composed segments as static, non-editable text (an applied filter
     // that can't be changed, e.g. one on an archived source). The renderer should
     // pass this through to its FilterSegment* children.
@@ -1368,11 +1373,14 @@ export interface FilterSegmentInputProps {
     // Render the value as static text (no input) — for an applied filter that should
     // stay legible but not editable.
     readOnly?: boolean;
+    // The native input type collecting the value. A field type that has a control of its
+    // own — a date, a number — names it here rather than being typed as free text.
+    type?: 'text' | 'date' | 'number';
 }
 
 // A text-input segment styled like the built-in value input, for the value part
 // of a custom renderer composed from segments.
-export function FilterSegmentInput({value, onChange, placeholder, ariaLabel, className, testId, readOnly}: FilterSegmentInputProps) {
+export function FilterSegmentInput({value, onChange, placeholder, ariaLabel, className, testId, readOnly, type = 'text'}: FilterSegmentInputProps) {
     const context = useFilterContext();
 
     return (
@@ -1397,6 +1405,7 @@ export function FilterSegmentInput({value, onChange, placeholder, ariaLabel, cla
                     data-slot="filters-input"
                     data-testid={testId}
                     placeholder={placeholder}
+                    type={type}
                     value={value}
                     onChange={event => onChange(event.target.value)}
                 />
@@ -1411,6 +1420,7 @@ interface FilterValueSelectorProps<T = unknown> {
     onChange: (values: T[]) => void;
     operator: string;
     onOperatorChange?: (operator: string) => void;
+    onFieldChange?: (key: string) => void;
     readOnly?: boolean;
 }
 
@@ -1923,7 +1933,7 @@ function SelectOptionsPopover<T = unknown>({
     );
 }
 
-function FilterValueSelector<T = unknown>({field, values, onChange, operator, onOperatorChange, readOnly}: FilterValueSelectorProps<T>) {
+function FilterValueSelector<T = unknown>({field, values, onChange, operator, onOperatorChange, onFieldChange, readOnly}: FilterValueSelectorProps<T>) {
     const [open, setOpen] = useState(false);
     const [searchInput, setSearchInput] = useState('');
     const context = useFilterContext();
@@ -1952,7 +1962,7 @@ function FilterValueSelector<T = unknown>({field, values, onChange, operator, on
         // it sits directly in the filter item rather than inside a single value box
         // — otherwise its segments would nest inside one bordered value pill.
         if (field.renderOperatorInValue) {
-            return <>{field.customRenderer({field, values, onChange, operator, onOperatorChange, readOnly})}</>;
+            return <>{field.customRenderer({field, values, onChange, operator, onOperatorChange, onFieldChange, readOnly})}</>;
         }
 
         return (
@@ -1964,7 +1974,7 @@ function FilterValueSelector<T = unknown>({field, values, onChange, operator, on
                     readOnly
                 })}
             >
-                {field.customRenderer({field, values, onChange, operator, onOperatorChange, readOnly})}
+                {field.customRenderer({field, values, onChange, operator, onOperatorChange, onFieldChange, readOnly})}
             </div>
         );
     }
@@ -2473,6 +2483,7 @@ export const FiltersContent = <T = unknown,>({filters, fields, onChange}: Filter
                             readOnly={field.readOnly}
                             values={filter.values}
                             onChange={values => updateFilter(filter.id, {values})}
+                            onFieldChange={key => updateFilter(filter.id, {field: key, values: [] as T[]})}
                             onOperatorChange={operator => updateFilter(filter.id, {operator})}
                         />
 
@@ -2856,6 +2867,7 @@ export function Filters<T = unknown>({
                                 readOnly={field.readOnly}
                                 values={filter.values}
                                 onChange={values => updateFilter(filter.id, {values})}
+                                onFieldChange={key => updateFilter(filter.id, {field: key, values: [] as T[]})}
                                 onOperatorChange={operator => updateFilter(filter.id, {operator})}
                             />
 

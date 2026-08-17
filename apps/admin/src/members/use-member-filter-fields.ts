@@ -6,7 +6,7 @@ import CustomFieldIcon from '@/shared/member-custom-fields/custom-field-icon';
 import {LabelFilterRenderer} from '@/members/label-picker';
 import {LucideIcon} from '@tryghost/shade/utils';
 import {MULTIPLE_ACTIVE_STRIPE_CUSTOMERS_FIELD} from './multiple-active-subscriptions';
-import {getMemberFields} from './member-fields';
+import {buildMemberFields} from './member-filter-catalogue';
 import type {MemberCustomField} from '@tryghost/admin-x-framework/api/member-custom-fields';
 import type {Offer} from '@tryghost/admin-x-framework/api/offers';
 
@@ -274,18 +274,28 @@ export function useMemberFilterFields({
     siteTimezone = 'UTC'
 }: UseMemberFilterFieldsOptions): FilterFieldGroup[] {
     return useMemo(() => {
-        const fields = getMemberFields();
+        // A newsletter the filter names but the site no longer lists still needs an entry, or
+        // its pill has nothing to render from. Same for an archived custom field.
+        const catalogueNewsletters = [
+            ...newsletters,
+            ...hydratedNewsletterSlugs
+                .filter(slug => !newsletters.some(newsletter => newsletter.slug === slug))
+                .map(slug => ({slug, name: slug}))
+        ];
+        const fields = buildMemberFields({
+            newsletters: catalogueNewsletters,
+            customFields: [...customFields, ...archivedCustomFields.map(field => ({...field, type: 'short_text' as const}))]
+        });
 
         function createFieldConfig(
             key: string,
             overrides: Partial<FilterFieldConfig> = {},
             operatorLabels: Record<string, string> = MEMBER_OPERATOR_LABELS
         ): FilterFieldConfig {
-            // A newsletter and a custom field are parameterised entries; everything else is
-            // named outright. `resolveField` handles both, so this only has to pick the key.
-            const field = key.startsWith('newsletters.')
-                ? fields['newsletters.:slug']
-                : key.startsWith('custom_field.') ? fields['custom_field.:key'] : fields[key];
+            // A field's own entry when the site's definitions are known, and the parameterised
+            // entry when they are not — which is the same lookup either way.
+            const field = fields[key]
+                ?? (key.startsWith('newsletters.') ? fields['newsletters.:slug'] : fields['custom_field.:key']);
 
             return {
                 key,

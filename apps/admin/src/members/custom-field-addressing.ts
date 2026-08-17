@@ -48,13 +48,17 @@ function readValues(values: unknown[]): {subfield: string; value: unknown} {
 
 /**
  * The subfield belongs to the addressing, the value to the semantics.
+ *
+ * `boundKey` is the field this addressing is for, when it is a named entry — those resolve by
+ * exact key, so there is no parameter to read it from. The shared `custom_field.:key` entry
+ * passes nothing and takes it from the key it matched.
  */
-export function customFieldAddressing(): FieldAddressing {
+export function customFieldAddressing(boundKey?: string): FieldAddressing {
     return {
         presenceOperators: CUSTOM_FIELD_SET_OPERATORS,
 
         address(predicate, ctx) {
-            const fieldKey = ctx.params.key;
+            const fieldKey = boundKey ?? ctx.params.key;
             const {subfield, value} = readValues(predicate.values);
 
             if (!fieldKey) {
@@ -71,7 +75,7 @@ export function customFieldAddressing(): FieldAddressing {
         // set / not-set target a part's presence when a part is chosen (`path`), or the whole
         // field otherwise (the bare key clause, or its negation).
         addressPresence(predicate, ctx) {
-            const fieldKey = ctx.params.key;
+            const fieldKey = boundKey ?? ctx.params.key;
             const {subfield} = readValues(predicate.values);
 
             if (!fieldKey) {

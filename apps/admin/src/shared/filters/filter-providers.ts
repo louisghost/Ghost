@@ -102,3 +102,43 @@ export function buildCatalogue(descriptors: readonly FieldDescriptor[]): Record<
 
     return catalogue;
 }
+
+/**
+ * Where a set of fields comes from.
+ *
+ * A provider that knows its fields at build time and one that only knows them after a fetch
+ * make the same statement; the difference is `resolved`, and what depends on it is whether a
+ * filter naming those fields can be read yet.
+ */
+export interface FieldProvider {
+    resolved: boolean;
+    /**
+     * NQL key prefixes whose clauses this provider's fields interpret more precisely than the
+     * fallback entry does. A filter naming one is readable either way — as text through the
+     * fallback, or as its real type once resolved — so this decides whether to wait, not
+     * whether it parses.
+     */
+    claims?: readonly string[];
+    fields: readonly FieldDescriptor[];
+}
+
+/** Every provider's fields, in order. Later providers win a key clash, so fallbacks go first. */
+export function buildProvidedCatalogue(providers: readonly FieldProvider[]): Record<string, FilterField> {
+    return buildCatalogue(providers.flatMap(provider => provider.fields));
+}
+
+/**
+ * Whether this filter can be read as precisely as it will ever be read.
+ *
+ * Read off the raw string, because deciding whether to wait cannot itself require parsing. A
+ * filter naming no unresolved provider's clauses never waits — and one that does still parses
+ * through the fallback entry, so waiting protects precision rather than preventing loss.
+ */
+export function catalogueCanRead(filter: string | undefined, providers: readonly FieldProvider[]): boolean {
+    if (!filter) {
+        return true;
+    }
+
+    return providers.every(provider => provider.resolved
+        || !(provider.claims ?? []).some(claim => filter.includes(claim)));
+}

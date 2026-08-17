@@ -1,5 +1,5 @@
 import {getCompoundChildren, readNegatedString} from '@/shared/filters';
-import type {AstNode, CompoundMatch, FieldAddressing, FieldDescriptor, SemanticValue, SerializedValue, ValueSemantics} from '@/shared/filters';
+import type {AstNode, CompoundMatch, FieldAddressing, FieldDescriptor, FieldProvider, SemanticValue, SerializedValue, ValueSemantics} from '@/shared/filters';
 
 // Whether a member takes one newsletter.
 //
@@ -21,24 +21,27 @@ const OPTIONS = [
     {value: 'unsubscribed', label: 'Unsubscribed'}
 ];
 
-export function newsletterSubscriptionSemantics(): ValueSemantics<'is'> {
+/**
+ * `slug` is the newsletter this vocabulary writes for, when the field is a named one. The
+ * parameterised entry passes nothing and takes it from the key instead.
+ */
+export function newsletterSubscriptionSemantics(slug?: string): ValueSemantics<'is'> {
     return {
         operators: ['is'],
         serialize({operator, values}, ctx): SerializedValue | null {
-            // The slug comes from the field being written, which the key carries as a parameter.
-            const slug = ctx.params.slug;
+            const writing = slug ?? ctx.params.slug;
             const value = values[0];
 
-            if (!slug || operator !== 'is') {
+            if (!writing || operator !== 'is') {
                 return null;
             }
 
             if (value === 'subscribed') {
-                return {join: 'and', fragments: [{expression: slug}, {key: EMAIL_DISABLED, expression: '0'}]};
+                return {join: 'and', fragments: [{expression: writing}, {key: EMAIL_DISABLED, expression: '0'}]};
             }
 
             if (value === 'unsubscribed') {
-                return {join: 'or', fragments: [{expression: `-${slug}`}, {key: EMAIL_DISABLED, expression: '1'}]};
+                return {join: 'or', fragments: [{expression: `-${writing}`}, {key: EMAIL_DISABLED, expression: '1'}]};
             }
 
             return null;
@@ -58,10 +61,10 @@ export function newsletterSubscriptionSemantics(): ValueSemantics<'is'> {
  * a saved filter naming one newsletter reads back as that newsletter — including one this site
  * no longer has — instead of being re-attributed to whichever entry was tried first.
  */
-export function newsletterAddressing(): FieldAddressing {
+export function newsletterAddressing(slug?: string): FieldAddressing {
     return {
         address(predicate, ctx) {
-            return ctx.params.slug ? {valueKey: SLUG_ATTRIBUTE, values: predicate.values} : null;
+            return (slug ?? ctx.params.slug) ? {valueKey: SLUG_ATTRIBUTE, values: predicate.values} : null;
         },
 
         // A newsletter filter is always a compound, so nothing reaches the simple dispatch.
@@ -77,7 +80,7 @@ export function newsletterAddressing(): FieldAddressing {
                     continue;
                 }
 
-                let slug: string | undefined;
+                let named: string | undefined;
                 let negated = false;
                 let hasEmailDisabled = false;
 
@@ -85,14 +88,14 @@ export function newsletterAddressing(): FieldAddressing {
                     const raw = child[SLUG_ATTRIBUTE];
 
                     if (typeof raw === 'string') {
-                        slug = raw;
+                        named = raw;
                         negated = false;
                     }
 
                     const denied = readNegatedString(raw);
 
                     if (denied !== null) {
-                        slug = denied;
+                        named = denied;
                         negated = true;
                     }
 
@@ -101,7 +104,7 @@ export function newsletterAddressing(): FieldAddressing {
                     }
                 }
 
-                if (!slug || !hasEmailDisabled) {
+                if (!named || !hasEmailDisabled) {
                     continue;
                 }
 
@@ -112,7 +115,7 @@ export function newsletterAddressing(): FieldAddressing {
                 return {
                     kind: 'predicate',
                     predicate: {
-                        field: `${KEY_PREFIX}${slug}`,
+                        field: `${KEY_PREFIX}${named}`,
                         operator: 'is',
                         values: [negated ? 'unsubscribed' : 'subscribed']
                     }
@@ -124,7 +127,44 @@ export function newsletterAddressing(): FieldAddressing {
     };
 }
 
-/** One entry answering for every newsletter a site has, now or later. */
+export const NEWSLETTER_CLAUSE = SLUG_ATTRIBUTE;
+
+export interface NewsletterDefinition {
+    slug: string;
+    name: string;
+}
+
+/**
+ * One entry per newsletter a site has, carrying its name for the picker.
+ *
+ * Reading is unaffected by which of these is tried first: the addressing takes the slug from
+ * the clause, so every entry answers for the newsletter the filter actually names.
+ */
+export function newsletterDescriptor(newsletter: NewsletterDefinition): FieldDescriptor {
+    return {
+        key: `${KEY_PREFIX}${newsletter.slug}`,
+        semantics: newsletterSubscriptionSemantics(newsletter.slug),
+        addressing: newsletterAddressing(newsletter.slug),
+        operators: ['is'],
+        options: OPTIONS,
+        ui: {
+            label: newsletter.name,
+            type: 'select',
+            searchable: false,
+            hideOperatorSelect: true
+        }
+    };
+}
+
+export function newsletterProvider(newsletters: readonly NewsletterDefinition[] | undefined): FieldProvider {
+    return {
+        resolved: newsletters !== undefined,
+        claims: [SLUG_ATTRIBUTE],
+        fields: (newsletters ?? []).map(newsletterDescriptor)
+    };
+}
+
+/** The entry answering for every newsletter, including one this build has not heard of. */
 export const NEWSLETTER_FIELD: FieldDescriptor = {
     key: `${KEY_PREFIX}:slug`,
     semantics: newsletterSubscriptionSemantics(),

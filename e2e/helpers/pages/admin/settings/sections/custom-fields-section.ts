@@ -23,16 +23,31 @@ export class CustomFieldsSection extends BasePage {
         return this.section.getByTestId('custom-field-list-item').filter({hasText: name});
     }
 
-    /**
-     * Create a field of the default (short text) type. That keeps the member
-     * detail editor a plain text input, which is all the cross-surface flow
-     * needs. The modal closes itself on success.
-     */
-    async createShortTextField(name: string): Promise<void> {
+    /** Creates a field of the named type. The modal closes itself on success. */
+    async createField(name: string, type?: string): Promise<void> {
         await this.addButton.waitFor();
         await this.addButton.click();
         await this.modal.getByLabel('Name').fill(name);
+
+        if (type) {
+            await this.modal.getByTestId('custom-field-type').click();
+            await this.page.getByRole('option', {name: type, exact: true}).click();
+        }
+
         await this.modal.getByRole('button', {name: 'Save'}).click();
         await this.listItem(name).waitFor();
+    }
+
+    /** Short text is the default type, and keeps the member detail editor a plain input. */
+    async createShortTextField(name: string): Promise<void> {
+        await this.createField(name);
+    }
+
+    /**
+     * An address is a composite: one field storing several named parts, each filtered as a
+     * field in its own right. See `MemberDetailsPage.setAddressCustomFieldValue`.
+     */
+    async createAddressField(name: string): Promise<void> {
+        await this.createField(name, 'Address');
     }
 }
