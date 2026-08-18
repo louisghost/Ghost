@@ -14,6 +14,7 @@ export interface GiftPurchaseConfirmationData {
         link: string;
         expiresAt: string;
         recipientEmail: string | null;
+        deliveryDate: string | null;
     };
 }
 
@@ -25,7 +26,19 @@ export function renderText(data: GiftPurchaseConfirmationData, t: Translate): st
         siteTitle: data.siteTitle,
         interpolation: {escapeValue: false}
     };
-    const intro = data.gift.recipientEmail
+    const intro = data.gift.recipientEmail && data.gift.deliveryDate
+        ? data.gift.isMonthly
+            ? t('Thank you for your support. Your gift — a {duration}-month {tierName} membership to {siteTitle} — will be sent to {recipientEmail} on {deliveryDate}. You can also share the link below yourself.', {
+                ...giftDescription,
+                recipientEmail: data.gift.recipientEmail,
+                deliveryDate: data.gift.deliveryDate
+            })
+            : t('Thank you for your support. Your gift — a {duration}-year {tierName} membership to {siteTitle} — will be sent to {recipientEmail} on {deliveryDate}. You can also share the link below yourself.', {
+                ...giftDescription,
+                recipientEmail: data.gift.recipientEmail,
+                deliveryDate: data.gift.deliveryDate
+            })
+        : data.gift.recipientEmail
         ? data.gift.isMonthly
             ? t('Thank you for your support. Your gift — a {duration}-month {tierName} membership to {siteTitle} — is on its way to {recipientEmail}. You can also share the link below yourself.', {
                 ...giftDescription,
@@ -38,7 +51,7 @@ export function renderText(data: GiftPurchaseConfirmationData, t: Translate): st
         : data.gift.isMonthly
             ? t('Thank you for your support. Share the link below with whoever you\'d like to gift them a {duration}-month {tierName} membership to {siteTitle}.', giftDescription)
             : t('Thank you for your support. Share the link below with whoever you\'d like to gift them a {duration}-year {tierName} membership to {siteTitle}.', giftDescription);
-    const heading = data.gift.recipientEmail ? t('Your gift is on its way') : t('Your gift is ready');
+    const heading = data.gift.deliveryDate ? t('Your gift is scheduled') : data.gift.recipientEmail ? t('Your gift is on its way') : t('Your gift is ready');
 
     return `${heading}
 

@@ -1,3 +1,4 @@
+import {useRef} from 'react';
 import Interpolate from '@doist/react-interpolate';
 import CheckmarkIcon from '../../images/icons/checkmark.svg?react';
 import QuoteIcon from '../../images/icons/quote.svg?react';
@@ -11,11 +12,20 @@ import {t} from '../../utils/i18n';
 // it — same order, same palette, same accent-coloured redeem button — so what
 // the buyer watches fill in is what the recipient actually opens.
 
+const parseLocalDate = (value) => {
+    const [year, month, day] = (value || '').split('-').map(Number);
+    if (!year || !month || !day) {
+        return null;
+    }
+    return new Date(year, month - 1, day);
+};
+
 const GiftEmailPreview = ({
     recipientName,
     recipientEmail,
     buyerName,
     giftMessage,
+    deliveryDate,
     cadence,
     duration,
     tierName,
@@ -28,7 +38,12 @@ const GiftEmailPreview = ({
     const fromName = buyerName.trim();
     const message = giftMessage.trim();
 
+    const isScheduled = !!deliveryDate;
+    const scheduledDate = isScheduled ? getDateString(parseLocalDate(deliveryDate)) : '';
     const todayDate = getDateString(new Date());
+    const lastScheduledDate = useRef('');
+    const scheduledLabel = isScheduled ? scheduledDate : lastScheduledDate.current;
+    lastScheduledDate.current = scheduledLabel;
 
     // "Name <address>" is how a mail client identifies a recipient; fall back to
     // whichever half the buyer has filled in so far.
@@ -71,7 +86,10 @@ const GiftEmailPreview = ({
                             </div>
                         </div>
                     </div>
-                    <div className='gh-portal-gift-email-date'>{todayDate}</div>
+                    <div className='gh-portal-gift-email-date-stack'>
+                        <div aria-hidden={isScheduled} className='gh-portal-gift-email-date' data-active={!isScheduled}>{todayDate}</div>
+                        <div aria-hidden={!isScheduled} className='gh-portal-gift-email-date' data-active={isScheduled}>{scheduledLabel}</div>
+                    </div>
                 </div>
 
                 <div className='gh-portal-gift-email-body'>

@@ -606,8 +606,8 @@ describe('Portal Data links:', () => {
                 labs: {giftSubCustomization: true}
             };
             const tierId = site.products.find(product => product.type === 'paid').id;
-            window.location.href = `https://portal.localhost/?stripe=gift-purchase-success&gift_token=abc123&gift_tier=${tierId}&gift_cadence=year&gift_duration=12&gift_delivery=email`;
-            window.location.search = `?stripe=gift-purchase-success&gift_token=abc123&gift_tier=${tierId}&gift_cadence=year&gift_duration=12&gift_delivery=email`;
+            window.location.href = `https://portal.localhost/?stripe=gift-purchase-success&gift_token=abc123&gift_tier=${tierId}&gift_cadence=year&gift_duration=12&gift_delivery=email&gift_delivery_date=2026-12-25`;
+            window.location.search = `?stripe=gift-purchase-success&gift_token=abc123&gift_tier=${tierId}&gift_cadence=year&gift_duration=12&gift_delivery=email&gift_delivery_date=2026-12-25`;
             window.location.hash = '';
             window.location.pathname = '/';
 
@@ -623,8 +623,11 @@ describe('Portal Data links:', () => {
             popupFrame = await utils.findByTitle(/portal-popup/i);
             expect(popupFrame).toBeInTheDocument();
 
-            const giftTitle = within(popupFrame.contentDocument).queryByText(/your gift is on its way/i);
+            const giftTitle = within(popupFrame.contentDocument).queryByText(/your gift is scheduled/i);
             expect(giftTitle).toBeInTheDocument();
+
+            const deliveryDate = within(popupFrame.contentDocument).queryByText(/25 Dec 2026/i);
+            expect(deliveryDate).toBeInTheDocument();
 
             const redeemUrl = within(popupFrame.contentDocument).queryByText(/\/gift\/abc123$/);
             expect(redeemUrl).toBeInTheDocument();

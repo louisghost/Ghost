@@ -1,6 +1,7 @@
 import {useContext, useEffect, useRef, useState} from 'react';
 import AppContext from '../../app-context';
 import CloseButton from '../common/close-button';
+import DatePicker from '../common/date-picker';
 import SiteTitleBackButton from '../common/site-title-back-button';
 import ActionButton from '../common/action-button';
 import GiftCard from '../common/gift-card';
@@ -504,6 +505,23 @@ html[dir="rtl"] .gh-portal-content.gift .gh-portal-btn-site-title-back {
     color: var(--grey8);
     font-size: 1.2rem;
     letter-spacing: 0.02em;
+}
+
+.gh-portal-gift-checkout-delivery-date {
+    margin-top: 16px;
+}
+
+.gh-portal-gift-checkout-delivery-date .gh-portal-input {
+    margin-bottom: 0;
+    box-sizing: border-box;
+}
+
+.gh-portal-gift-checkout-delivery-error {
+    margin: 8px 0 0;
+    color: var(--red);
+    font-size: 1.3rem;
+    letter-spacing: 0.35px;
+    line-height: 1.6em;
 }
 
 .gh-portal-gift-checkout .gh-portal-btn-primary {
@@ -1415,6 +1433,24 @@ function GiftDurationSwitch({offeredDurations, activeDuration, setSelectedDurati
 // product's choice for how long a gift note should get.
 const GIFT_EMAIL_MAX_LENGTH = 191;
 const GIFT_MESSAGE_MAX_LENGTH = 250;
+const GIFT_MAX_SCHEDULE_DAYS = 365;
+
+function getDateInputValue(date, timeZone = 'Etc/UTC') {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).formatToParts(date);
+    const part = type => parts.find(item => item.type === type)?.value;
+    return `${part('year')}-${part('month')}-${part('day')}`;
+}
+
+function addCalendarDays(value, days) {
+    const [year, month, day] = value.split('-').map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day + days));
+    return date.toISOString().slice(0, 10);
+}
 
 function getTierPriceLabel(product, months) {
     return formatGiftValue(getGiftPrice(product, months));
@@ -1431,6 +1467,7 @@ const BetaGiftPage = () => {
     const [buyerName, setBuyerName] = useState(member?.name || '');
     const [giftMessage, setGiftMessage] = useState('');
     const [deliveryMethod, setDeliveryMethod] = useState('email');
+    const [deliveryDate, setDeliveryDate] = useState(() => getDateInputValue(new Date(), site?.timezone));
     const [errors, setErrors] = useState({});
     const {cardRef, containerProps: cardTiltProps} = useCardTilt();
 
@@ -1533,6 +1570,8 @@ const BetaGiftPage = () => {
     // stays for the plan step and for "I'll share it myself", where no email is
     // sent and the card is what the buyer passes on.
     const showEmailPreview = step === 'delivery' && deliveryMethod === 'email';
+    const minDeliveryDate = getDateInputValue(new Date(), site.timezone);
+    const maxDeliveryDate = addCalendarDays(minDeliveryDate, GIFT_MAX_SCHEDULE_DAYS);
 
     const emailField = {
         type: 'email',
@@ -1586,7 +1625,8 @@ const BetaGiftPage = () => {
     const handleRecipientEmailChange = (event) => {
         setErrors(currentErrors => ({
             ...currentErrors,
-            recipientEmail: ''
+            recipientEmail: '',
+            deliveryDate: ''
         }));
         setRecipientEmail(event.target.value);
     };
@@ -1594,9 +1634,18 @@ const BetaGiftPage = () => {
     const handleDeliveryMethodChange = (method) => {
         setErrors(currentErrors => ({
             ...currentErrors,
-            recipientEmail: ''
+            recipientEmail: '',
+            deliveryDate: ''
         }));
         setDeliveryMethod(method);
+    };
+
+    const handleDeliveryDateChange = (nextDate) => {
+        setErrors(currentErrors => ({
+            ...currentErrors,
+            deliveryDate: ''
+        }));
+        setDeliveryDate(nextDate);
     };
 
     const handleContinueToDelivery = (e) => {
@@ -1632,6 +1681,7 @@ const BetaGiftPage = () => {
         const trimmedBuyerName = buyerName.trim();
         const trimmedGiftMessage = giftMessage.trim();
         const isEmailDelivery = deliveryMethod === 'email';
+        const isScheduled = isEmailDelivery && deliveryDate > minDeliveryDate;
 
         const fieldsToValidate = [];
         if (!isLoggedIn) {
@@ -1653,6 +1703,10 @@ const BetaGiftPage = () => {
             formErrors.recipientEmail = t('Enter the recipient\'s email address');
         }
 
+        if (isEmailDelivery && (!deliveryDate || deliveryDate < minDeliveryDate || deliveryDate > maxDeliveryDate)) {
+            formErrors.deliveryDate = deliveryDate ? t('Choose a date within the next year') : t('Choose a delivery date');
+        }
+
         const formHasErrors = Object.values(formErrors).some(errorMessage => !!errorMessage);
 
         setErrors(formErrors);
@@ -1672,7 +1726,8 @@ const BetaGiftPage = () => {
             ...(isEmailDelivery ? {recipientEmail: trimmedRecipientEmail} : {}),
             ...(isEmailDelivery && trimmedRecipientName ? {recipientName: trimmedRecipientName} : {}),
             ...(trimmedBuyerName ? {buyerName: trimmedBuyerName} : {}),
-            ...(isEmailDelivery && trimmedGiftMessage ? {personalMessage: trimmedGiftMessage} : {})
+            ...(isEmailDelivery && trimmedGiftMessage ? {personalMessage: trimmedGiftMessage} : {}),
+            ...(isScheduled ? {deliveryDate} : {})
         });
     };
 
@@ -1826,7 +1881,7 @@ const BetaGiftPage = () => {
                                             className={'gh-portal-btn' + (deliveryMethod === 'email' ? ' active' : '')}
                                             onClick={() => handleDeliveryMethodChange('email')}
                                         >
-                                            {t('Email it to them now')}
+                                            {t('Email it to them')}
                                         </button>
                                         <button
                                             type='button'
@@ -1871,6 +1926,24 @@ const BetaGiftPage = () => {
                                             <div className='gh-portal-gift-checkout-reveal-inner'>
                                                 <p className='gh-portal-gift-checkout-message-count'>{giftMessage.length}/{GIFT_MESSAGE_MAX_LENGTH}</p>
                                             </div>
+                                        </div>
+                                        <div className='gh-portal-gift-checkout-delivery-date'>
+                                            <div className='gh-portal-input-labelcontainer'>
+                                                <label className='gh-portal-input-label' htmlFor='gift-delivery-date'>{t('Delivery date')}</label>
+                                            </div>
+                                            <DatePicker
+                                                ariaLabel={t('Delivery date')}
+                                                hasError={!!errors.deliveryDate}
+                                                id='gift-delivery-date'
+                                                max={maxDeliveryDate}
+                                                min={minDeliveryDate}
+                                                minLabel={t('Now')}
+                                                value={deliveryDate}
+                                                onChange={handleDeliveryDateChange}
+                                            />
+                                            {errors.deliveryDate && (
+                                                <p className='gh-portal-gift-checkout-delivery-error'>{errors.deliveryDate}</p>
+                                            )}
                                         </div>
                                     </div>
 
@@ -1942,6 +2015,7 @@ const BetaGiftPage = () => {
                                             buyerName={buyerName}
                                             cadence={emailDuration.cadence}
                                             duration={emailDuration.duration}
+                                            deliveryDate={deliveryDate > minDeliveryDate ? deliveryDate : ''}
                                             giftMessage={giftMessage}
                                             recipientEmail={recipientEmail}
                                             recipientName={recipientName}

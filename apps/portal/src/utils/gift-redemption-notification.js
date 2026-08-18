@@ -83,6 +83,14 @@ export function getGiftRedemptionErrorMessage(error) {
         case 'GIFT_PAID_MEMBER':
             subtitle = t('You already have an active subscription.');
             break;
+        case 'GIFT_NOT_YET_REDEEMABLE': {
+            const [year, month, day] = (error.context || '').split('-').map(Number);
+            const date = year && month && day ? new Date(year, month - 1, day) : null;
+            subtitle = date
+                ? t('This gift will be available on {date}.', {date: new Intl.DateTimeFormat(undefined, {day: 'numeric', month: 'short', year: 'numeric'}).format(date)})
+                : t('This gift is not available yet.');
+            break;
+        }
         case 'TOKEN_EXPIRED':
             subtitle = t('Email confirmation link expired.');
             break;

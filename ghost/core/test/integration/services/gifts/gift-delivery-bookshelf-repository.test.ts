@@ -33,12 +33,14 @@ describe('GiftDeliveryBookshelfRepository (integration)', function () {
         startedAt = null,
         deliveryStatus = 'pending',
         giftStatus = 'purchased',
-        purchasedAt = new Date()
+        purchasedAt = new Date('2026-01-01T00:00:00.000Z'),
+        redeemableAt = purchasedAt
     }: {
         startedAt?: Date | null;
         deliveryStatus?: string;
         giftStatus?: string;
         purchasedAt?: Date;
+        redeemableAt?: Date;
     } = {}) {
         giftSequence += 1;
         const gift = await models.Gift.add({
@@ -57,6 +59,7 @@ describe('GiftDeliveryBookshelfRepository (integration)', function () {
             stripe_checkout_session_id: `cs_claim_${giftSequence}`,
             stripe_payment_intent_id: `pi_claim_${giftSequence}`,
             checkout_started_at: purchasedAt,
+            redeemable_at: redeemableAt,
             consumes_at: null,
             expires_at: new Date(purchasedAt.getTime() + 365 * 24 * 60 * 60 * 1000),
             status: giftStatus,
@@ -208,9 +211,26 @@ describe('GiftDeliveryBookshelfRepository (integration)', function () {
             startedAt: now
         });
 
-        const deliveries = await deliveryRepository.findRecoverableForPurchasedGifts(staleBefore, 100);
+        const deliveries = await deliveryRepository.findRecoverableForPurchasedGifts(now, staleBefore, 100);
 
         assert.deepEqual(new Set(deliveries.map(delivery => delivery.id)), new Set([purchased.delivery.id, stale.delivery.id]));
+    });
+
+    it('keeps future deliveries pending until gift redemption availability', async function () {
+        const now = new Date('2026-08-18T12:00:00.000Z');
+        const future = await createPendingEmailGift({
+            purchasedAt: new Date('2026-08-18T10:00:00.000Z'),
+            redeemableAt: new Date('2026-12-25T09:00:00.000Z')
+        });
+
+        assert.equal(await deliveryRepository.tryStartDelivery(future.delivery.id, now, new Date('2026-08-18T11:00:00.000Z')), null);
+        assert.deepEqual(await deliveryRepository.findRecoverableForPurchasedGifts(now, new Date('2026-08-18T11:00:00.000Z'), 100), []);
+
+        const scheduled = await deliveryRepository.findScheduledForPurchasedGifts(now);
+        assert.deepEqual(scheduled, [{
+            id: future.delivery.id,
+            redeemableAt: new Date('2026-12-25T09:00:00.000Z')
+        }]);
     });
 
     it('allows exactly one concurrent caller to reclaim a stale sending delivery', async function () {

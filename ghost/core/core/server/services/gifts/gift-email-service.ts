@@ -57,6 +57,7 @@ interface PurchaseConfirmationData {
     cadence: GiftCadence;
     duration: number;
     expiresAt: Date;
+    redeemableAt: Date;
     recipientEmail?: string | null;
 }
 
@@ -87,6 +88,8 @@ interface GiftDeliveryFailureNotificationData {
     token: string;
     expiresAt: Date;
 }
+
+type GiftSentConfirmationData = GiftDeliveryFailureNotificationData;
 
 export class GiftEmailService {
     private readonly transactionalMailer: TransactionalMailer;
@@ -150,7 +153,7 @@ export class GiftEmailService {
         }).format(date);
     }
 
-    async sendPurchaseConfirmation({buyerEmail, token, tierName, cadence, duration, expiresAt, recipientEmail = null}: PurchaseConfirmationData): Promise<void> {
+    async sendPurchaseConfirmation({buyerEmail, token, tierName, cadence, duration, expiresAt, redeemableAt, recipientEmail = null}: PurchaseConfirmationData): Promise<void> {
         const siteDomain = this.siteDomain;
         const siteUrl = this.urlUtils.getSiteUrl();
         const siteTitle = this.settingsCache.get('title') ?? siteDomain;
@@ -169,17 +172,51 @@ export class GiftEmailService {
                 isMonthly: cadence === 'month',
                 link: giftLink,
                 expiresAt: this.formatDate(expiresAt),
+                recipientEmail,
+                deliveryDate: recipientEmail && redeemableAt.getTime() > Date.now() ? this.formatDate(redeemableAt) : null
+            }
+        });
+
+        const scheduled = recipientEmail && redeemableAt.getTime() > Date.now();
+
+        await this.transactionalMailer.send({
+            to: buyerEmail,
+            subject: scheduled
+                ? this.t('Your gift will be sent on {deliveryDate}', {deliveryDate: this.formatDate(redeemableAt)})
+                : recipientEmail ? this.t('Your gift is on its way') : this.t('Your gift is ready'),
+            html,
+            text,
+            from: this.getFromAddress(),
+            forceTextContent: true
+        });
+    }
+
+    async sendGiftSentConfirmation({buyerEmail, recipientEmail, token, expiresAt}: GiftSentConfirmationData): Promise<void> {
+        const siteDomain = this.siteDomain;
+        const siteUrl = this.urlUtils.getSiteUrl();
+        const siteTitle = this.settingsCache.get('title') ?? siteDomain;
+        const giftLink = `${siteUrl.replace(/\/$/, '')}/gift/${token}`;
+        const {html, text} = await this.renderer.renderSentConfirmation({
+            siteTitle,
+            siteUrl,
+            siteIconUrl: this.blogIcon.getIconUrl({absolute: true, fallbackToDefault: false}),
+            siteDomain,
+            toEmail: buyerEmail,
+            gift: {
+                link: giftLink,
+                expiresAt: this.formatDate(expiresAt),
                 recipientEmail
             }
         });
 
         await this.transactionalMailer.send({
             to: buyerEmail,
-            subject: recipientEmail ? this.t('Your gift is on its way') : this.t('Your gift is ready'),
+            subject: this.t('Your gift has been sent'),
             html,
             text,
             from: this.getFromAddress(),
-            forceTextContent: true
+            forceTextContent: true,
+            disableTracking: true
         });
     }
 

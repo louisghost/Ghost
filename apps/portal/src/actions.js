@@ -372,7 +372,7 @@ async function continueGiftSubscription({state, api}) {
 
 async function checkoutGift({data, state, api}) {
     try {
-        const {tierId, cadence, duration, email, deliveryMethod, recipientEmail, recipientName, buyerName, personalMessage} = data;
+        const {tierId, cadence, duration, email, deliveryMethod, recipientEmail, recipientName, buyerName, personalMessage, deliveryDate} = data;
         await api.member.checkoutGift({
             tierId,
             ...(duration === undefined ? {cadence} : {duration}),
@@ -381,7 +381,8 @@ async function checkoutGift({data, state, api}) {
             ...(recipientEmail ? {recipientEmail} : {}),
             ...(recipientName ? {recipientName} : {}),
             ...(buyerName ? {buyerName} : {}),
-            ...(personalMessage ? {personalMessage} : {})
+            ...(personalMessage ? {personalMessage} : {}),
+            ...(deliveryDate ? {deliveryDate} : {})
         });
         return {
             action: 'checkoutGift:success'

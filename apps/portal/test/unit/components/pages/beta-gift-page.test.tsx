@@ -177,7 +177,7 @@ describe('BetaGiftPage', () => {
         fireEvent.change(getByLabelText('Optional message'), {target: {value: 'Enjoy!'}});
 
         fireEvent.click(getByRole('radio', {name: 'I\'ll share it myself'}));
-        fireEvent.click(getByRole('radio', {name: 'Email it to them now'}));
+        fireEvent.click(getByRole('radio', {name: 'Email it to them'}));
 
         expect(getByLabelText('Recipient\'s name')).toHaveValue('Taylor');
         expect(getByLabelText('Recipient\'s email')).toHaveValue('recipient@example.com');
@@ -191,5 +191,26 @@ describe('BetaGiftPage', () => {
             duration: 1,
             deliveryMethod: 'link'
         });
+    });
+
+    test('schedules email delivery from the always-visible delivery date field', () => {
+        const site = buildSite({labs: {giftSubCustomization: true}});
+        const {container, getByLabelText, getByRole, mockDoActionFn} = setup(site);
+
+        fireEvent.change(getByLabelText('Your name'), {target: {value: 'Jamie'}});
+        fireEvent.click(getByRole('button', {name: 'Continue to delivery details'}));
+        fireEvent.change(getByLabelText('Recipient\'s email'), {target: {value: 'recipient@example.com'}});
+        const deliveryDate = container.querySelector<HTMLInputElement>('#gift-delivery-date');
+        if (!deliveryDate) {
+            throw new Error('Expected delivery date input');
+        }
+        const scheduledDate = deliveryDate.getAttribute('max');
+        fireEvent.change(deliveryDate, {target: {value: scheduledDate}});
+        fireEvent.click(getByRole('button', {name: 'Continue to payment'}));
+
+        expect(mockDoActionFn).toHaveBeenCalledWith('checkoutGift', expect.objectContaining({
+            deliveryMethod: 'email',
+            deliveryDate: scheduledDate
+        }));
     });
 });

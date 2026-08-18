@@ -690,6 +690,7 @@ module.exports = class RouterController {
      * @param {string} [options.recipientName]
      * @param {string} [options.buyerName]
      * @param {string} [options.personalMessage]
+     * @param {string} [options.deliveryDate]
      * @param {string} [options.email]
      * @param {string} options.successUrl
      * @param {string} options.cancelUrl
@@ -715,6 +716,7 @@ module.exports = class RouterController {
                 recipientName: options.recipientName,
                 buyerName: options.buyerName,
                 personalMessage: options.personalMessage,
+                deliveryDate: options.deliveryDate,
                 successUrl: options.successUrl,
                 cancelUrl: options.cancelUrl,
                 buyer: {

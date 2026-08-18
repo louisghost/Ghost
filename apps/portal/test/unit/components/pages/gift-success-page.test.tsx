@@ -3,10 +3,11 @@ import BetaGiftSuccessPage from '../../../../src/components/pages/beta-gift-succ
 import {getPriceData, getProductData, getSiteData} from '../../../../src/utils/fixtures-generator';
 import {render} from '../../../utils/test-utils';
 
-function setup({Page, monthlyPrice, deliveryMethod = 'link'}: {
+function setup({Page, monthlyPrice, deliveryMethod = 'link', deliveryDate}: {
     Page: typeof GiftSuccessPage;
     monthlyPrice: ReturnType<typeof getPriceData> | null;
     deliveryMethod?: 'email' | 'link';
+    deliveryDate?: string;
 }) {
     const product = {
         ...getProductData({
@@ -29,7 +30,8 @@ function setup({Page, monthlyPrice, deliveryMethod = 'link'}: {
                 tierId: 'tier_123',
                 cadence: 'month',
                 duration: 3,
-                deliveryMethod
+                deliveryMethod,
+                deliveryDate
             }
         }
     });
@@ -70,6 +72,19 @@ describe('BetaGiftSuccessPage', () => {
         expect(getByText('Your gift is on its way')).toBeInTheDocument();
         expect(getByText("We'll email it to the recipient. A copy will be in your inbox too.")).toBeInTheDocument();
         expect(getByText('Share it yourself')).toBeInTheDocument();
+        expect(getByTestId('gift-redeem-link')).toHaveTextContent('/gift/abc123');
+    });
+
+    test('uses scheduled delivery wording and preserves the site-calendar date', () => {
+        const {getByText, getByTestId} = setup({
+            Page: BetaGiftSuccessPage,
+            monthlyPrice: getPriceData({amount: 500, interval: 'month'}),
+            deliveryMethod: 'email',
+            deliveryDate: '2026-12-25'
+        });
+
+        expect(getByText('Your gift is scheduled')).toBeInTheDocument();
+        expect(getByText("We'll email it to the recipient on 25 Dec 2026. A copy is in your inbox too.")).toBeInTheDocument();
         expect(getByTestId('gift-redeem-link')).toHaveTextContent('/gift/abc123');
     });
 });

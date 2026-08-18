@@ -1,9 +1,10 @@
 import {t} from './i18n';
 
 export class HumanReadableError extends Error {
-    constructor(message, {code} = {}) {
+    constructor(message, {code, context} = {}) {
         super(message);
         this.code = code ?? null;
+        this.context = context ?? null;
     }
 
     /**
@@ -17,7 +18,7 @@ export class HumanReadableError extends Error {
             try {
                 const json = await res.json();
                 if (json.errors && Array.isArray(json.errors) && json.errors.length > 0 && json.errors[0].message) {
-                    return new HumanReadableError(json.errors[0].message, {code: json.errors[0].code});
+                    return new HumanReadableError(json.errors[0].message, {code: json.errors[0].code, context: json.errors[0].context});
                 }
             } catch (e) {
                 // Failed to decode: ignore
@@ -34,7 +35,7 @@ export class HumanReadableError extends Error {
             try {
                 const json = await res.json();
                 if (json.errors && Array.isArray(json.errors) && json.errors.length > 0 && json.errors[0].message) {
-                    return new HumanReadableError(json.errors[0].message, {code: json.errors[0].code});
+                    return new HumanReadableError(json.errors[0].message, {code: json.errors[0].code, context: json.errors[0].context});
                 }
             } catch (e) {
                 // Failed to decode: ignore

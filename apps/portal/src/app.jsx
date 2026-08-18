@@ -600,7 +600,9 @@ export default class App extends React.Component {
             const cadence = qParams.get('gift_cadence');
             const duration = Number(qParams.get('gift_duration'));
             const deliveryMethod = qParams.get('gift_delivery');
-            clearURLParams(['stripe', 'gift_token', 'gift_tier', 'gift_cadence', 'gift_duration', 'gift_delivery']);
+            const deliveryDateParam = qParams.get('gift_delivery_date');
+            const deliveryDate = /^\d{4}-\d{2}-\d{2}$/.test(deliveryDateParam || '') ? deliveryDateParam : null;
+            clearURLParams(['stripe', 'gift_token', 'gift_tier', 'gift_cadence', 'gift_duration', 'gift_delivery', 'gift_delivery_date']);
             if (token) {
                 return {
                     showPopup: true,
@@ -610,7 +612,8 @@ export default class App extends React.Component {
                         tierId,
                         cadence,
                         duration: GIFT_DURATION_CATALOGUE.includes(duration) ? duration : null,
-                        deliveryMethod: deliveryMethod === 'email' ? 'email' : 'link'
+                        deliveryMethod: deliveryMethod === 'email' ? 'email' : 'link',
+                        deliveryDate
                     }
                 };
             }

@@ -5,6 +5,7 @@ import {GiftDeliveryBookshelfRepository} from './gift-delivery-bookshelf-reposit
 import {GiftDeliveryService} from './gift-delivery-service';
 import {GiftService} from './gift-service';
 import {GiftReminderScheduler} from './gift-reminder-scheduler';
+import {GiftDeliveryScheduler} from './gift-delivery-scheduler';
 import {GiftEmailService} from './gift-email-service';
 import {GiftController} from './gift-controller';
 import {SendGiftDeliveryEvent} from './events/send-gift-delivery-event';
@@ -38,6 +39,7 @@ export async function init(options: GiftServiceInitOptions): Promise<void> {
     const logging = require('@tryghost/logging');
     const {SubscriptionActivatedEvent} = require('../../../shared/events');
     const StartGiftReminderFlushEvent = require('./events/start-gift-reminder-flush-event');
+    const StartGiftDeliveryFlushEvent = require('./events/start-gift-delivery-flush-event');
     const StartGiftCleanupEvent = require('./events/start-gift-cleanup-event');
     const jobs = require('./jobs');
     const emailAnalyticsJobs = require('../email-analytics/jobs');
@@ -75,6 +77,12 @@ export async function init(options: GiftServiceInitOptions): Promise<void> {
         blogIcon,
         t
     });
+    const giftDeliveryScheduler = new GiftDeliveryScheduler({
+        apiUrl: options.apiUrl,
+        adapter: options.schedulerAdapter,
+        internalKeys: options.internalKeys,
+        findScheduled: () => deliveryRepository.findScheduledForPurchasedGifts(new Date())
+    });
     const giftDeliveryService = new GiftDeliveryService({
         giftRepository: repository,
         giftDeliveryRepository: deliveryRepository,
@@ -82,7 +90,8 @@ export async function init(options: GiftServiceInitOptions): Promise<void> {
         giftEmailService,
         giftEmailAnalytics: {
             schedule: () => emailAnalyticsJobs.scheduleRecurringGiftDeliveriesJob(true)
-        }
+        },
+        giftDeliveryScheduler
     });
 
     const giftReminderScheduler = new GiftReminderScheduler({
@@ -128,6 +137,16 @@ export async function init(options: GiftServiceInitOptions): Promise<void> {
             logging.info(`Sent ${remindedCount} gift reminders, skipped ${skippedCount}, failed ${failedCount} in ${Date.now() - start}ms`);
         } catch (err) {
             logging.error(err, 'Failed to process gift reminders');
+        }
+    });
+
+    DomainEvents.subscribe(StartGiftDeliveryFlushEvent, async () => {
+        const start = Date.now();
+        try {
+            const recoveredCount = await giftDeliveryService.recoverPending();
+            logging.info(`Processed ${recoveredCount} due gift deliveries in ${Date.now() - start}ms`);
+        } catch (err) {
+            logging.error(err, 'Failed to process due gift deliveries');
         }
     });
 

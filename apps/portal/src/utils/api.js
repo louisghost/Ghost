@@ -622,7 +622,7 @@ function setupGhostApi({siteUrl = window.location.origin, apiUrl, apiKey}) {
             });
         },
 
-        async checkoutGift({tierId, cadence, duration, email: customerEmail, deliveryMethod, recipientEmail, recipientName, buyerName, personalMessage} = {}) {
+        async checkoutGift({tierId, cadence, duration, email: customerEmail, deliveryMethod, recipientEmail, recipientName, buyerName, personalMessage, deliveryDate} = {}) {
             const siteUrlObj = new URL(siteUrl);
             const url = endpointFor({type: 'members', resource: 'create-stripe-checkout-session'});
 
@@ -649,6 +649,7 @@ function setupGhostApi({siteUrl = window.location.origin, apiUrl, apiKey}) {
                 ...(recipientName ? {recipientName} : {}),
                 ...(buyerName ? {buyerName} : {}),
                 ...(personalMessage ? {personalMessage} : {}),
+                ...(deliveryDate ? {deliveryDate} : {}),
                 cancelUrl: cancelUrlObj.href
             };
 

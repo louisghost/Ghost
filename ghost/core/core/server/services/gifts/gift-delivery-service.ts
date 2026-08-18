@@ -42,6 +42,12 @@ interface GiftEmailService {
         token: string;
         expiresAt: Date;
     }): Promise<void>;
+    sendGiftSentConfirmation(data: {
+        buyerEmail: string;
+        recipientEmail: string;
+        token: string;
+        expiresAt: Date;
+    }): Promise<void>;
 }
 
 interface GiftDeliveryServiceDeps {
@@ -51,6 +57,9 @@ interface GiftDeliveryServiceDeps {
     giftEmailService: GiftEmailService;
     giftEmailAnalytics: {
         schedule(): Promise<void>;
+    };
+    giftDeliveryScheduler: {
+        scheduleFor(deliveryId: string, redeemableAt: Date): Promise<void>;
     };
 }
 
@@ -85,13 +94,20 @@ export class GiftDeliveryService {
             return delivery?.recipientEmail ?? null;
         }
 
+        const gift = await this.deps.giftRepository.getById(giftId);
+        if (gift?.redeemableAt && gift.redeemableAt.getTime() > Date.now()) {
+            await this.deps.giftDeliveryScheduler.scheduleFor(delivery.id, gift.redeemableAt);
+            return delivery.recipientEmail;
+        }
+
         DomainEvents.dispatch(SendGiftDeliveryEvent.create({deliveryId: delivery.id}));
         return delivery.recipientEmail;
     }
 
     async recoverPending(limit = 1000): Promise<number> {
         const staleBefore = new Date(Date.now() - GIFT_DELIVERY_STALE_AFTER_MS);
-        const deliveries = await this.deps.giftDeliveryRepository.findRecoverableForPurchasedGifts(staleBefore, limit);
+        const now = new Date();
+        const deliveries = await this.deps.giftDeliveryRepository.findRecoverableForPurchasedGifts(now, staleBefore, limit);
 
         // Sequential on purpose: recovery can find many deliveries at once and each
         // send holds a mail transport call, so fanning out through events would open
@@ -230,6 +246,21 @@ export class GiftDeliveryService {
         }
 
         if (persisted) {
+            try {
+                await this.deps.giftEmailService.sendGiftSentConfirmation({
+                    buyerEmail: gift.buyerEmail,
+                    recipientEmail: delivery.recipientEmail,
+                    token: gift.token,
+                    expiresAt: gift.expiresAt!
+                });
+            } catch (err) {
+                logging.error({
+                    event: {name: 'gift_delivery.sent_confirmation.failed'},
+                    err,
+                    deliveryId: delivery.id,
+                    giftId: delivery.giftId
+                }, 'Failed to send gift sent confirmation to buyer');
+            }
             return 'sent';
         }
 
