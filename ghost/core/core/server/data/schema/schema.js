@@ -844,7 +844,7 @@ module.exports = {
                 isIn: [['member', 'import', 'system', 'api', 'admin']]
             }
         },
-        newsletter_id: {type: 'string', maxlength: 24, nullable: true, references: 'newsletters.id', cascadeDelete: false},
+        newsletter_id: {type: 'string', maxlength: 24, nullable: false, references: 'newsletters.id', cascadeDelete: false},
         '@@INDEXES@@': [
             ['newsletter_id', 'created_at']
         ]
