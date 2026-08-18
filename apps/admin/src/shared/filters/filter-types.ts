@@ -40,11 +40,18 @@ export interface FilterCodec {
 
 export interface FilterField {
     operators: readonly OperatorId[];
+    /** What this field's type calls its operators, which outranks any shared wording. */
+    operatorLabels?: Partial<Record<OperatorId, string>>;
     parseKeys?: readonly string[];
-    ui: {
+    /**
+     * Everything the picker draws with, checked against what the renderer actually reads. This
+     * was an index signature, which meant a misspelt `placeholder` or `min` compiled and then
+     * did nothing.
+     */
+    ui: Partial<Omit<FilterFieldConfig, 'key' | 'label' | 'type' | 'icon' | 'operators'>> & {
         label: string;
         type: FilterControl;
-        [key: string]: unknown;
+        icon?: string;
     };
     options?: Array<{value: string; label: string}>;
     metadata?: {

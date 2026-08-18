@@ -1,10 +1,10 @@
 import {type Filter} from '@tryghost/shade/patterns';
-import {buildMemberFields, canReadMemberFilter} from '@/members/member-filter-catalogue';
+import {buildMemberFields, canReadMemberFilter} from '@/members/member-filter-catalog';
 import {hasTimezoneSensitiveMemberFilter, isPredicateEnabled, parseMemberFilter, serializeMemberFilters} from '@/members/member-filter-query';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useSearchParams} from 'react-router';
-import type {CustomFieldDefinition} from '@/members/custom-field-filter-fields';
-import type {MemberFields} from '@/members/member-filter-catalogue';
+import type {CustomFieldDefinition} from '@/members/custom-fields/filter-fields';
+import type {MemberFields} from '@/members/member-filter-catalog';
 import type {NewsletterDefinition} from '@/members/newsletter-filter-fields';
 
 interface SetFiltersOptions {
@@ -73,7 +73,7 @@ function toSearchParams({baseSearchParams, filters, search, timezone, fields}: T
  * fetched here, so the hook keeps no hidden data dependency.
  *
  * `undefined` means not loaded and an empty array means none. A filter naming a source still in
- * flight is still parsed, through the catalogue's parameterised entries; what waits is writing
+ * flight is still parsed, through the catalog's parameterised entries; what waits is writing
  * it back, so a saved segment is never rewritten less precisely than it was written.
  */
 export function useMembersFilterState(

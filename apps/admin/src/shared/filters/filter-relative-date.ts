@@ -36,18 +36,21 @@ export function fieldHasRelativeOperator(field: FilterField): boolean {
  * last 30 days" of, and the direction is a property of the field: a signup date looks back,
  * a renewal date looks forward.
  */
-function withRelativeOperator(descriptor: FieldDescriptor, operator: RelativeDateOperator): FieldDescriptor {
+function withRelativeOperator<TDescriptor extends FieldDescriptor>(
+    descriptor: TDescriptor,
+    operator: RelativeDateOperator
+): TDescriptor {
     const declared = descriptor.operators
         ?? (descriptor.type ? FILTER_TYPES[descriptor.type].operators : []);
 
     return {...descriptor, operators: [...declared, operator]};
 }
 
-export function withPastRelativeOperator(descriptor: FieldDescriptor): FieldDescriptor {
+export function withPastRelativeOperator<TDescriptor extends FieldDescriptor>(descriptor: TDescriptor): TDescriptor {
     return withRelativeOperator(descriptor, RELATIVE_PAST_OPERATOR);
 }
 
-export function withFutureRelativeOperator(descriptor: FieldDescriptor): FieldDescriptor {
+export function withFutureRelativeOperator<TDescriptor extends FieldDescriptor>(descriptor: TDescriptor): TDescriptor {
     return withRelativeOperator(descriptor, RELATIVE_FUTURE_OPERATOR);
 }
 

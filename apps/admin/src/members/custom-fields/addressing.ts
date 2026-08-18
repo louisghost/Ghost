@@ -1,6 +1,6 @@
 import {escapeNqlString} from '@tryghost/nql-string';
 import {PRESENCE_OPERATORS, getCompoundChildren, readNegatedString, toComparator} from '@/shared/filters';
-import type {CompoundMatch, FieldAddressing} from '@/shared/filters';
+import type {CompoundMatch, PresenceAddressing} from '@/shared/filters';
 
 // The grammar a member custom field is filtered through, in one place for both directions.
 //
@@ -53,7 +53,7 @@ function readValues(values: unknown[]): {subfield: string; value: unknown} {
  * exact key, so there is no parameter to read it from. The shared `custom_field.:key` entry
  * passes nothing and takes it from the key it matched.
  */
-export function customFieldAddressing(boundKey?: string): FieldAddressing {
+export function customFieldAddressing(boundKey?: string): PresenceAddressing {
     return {
         presenceOperators: CUSTOM_FIELD_SET_OPERATORS,
 

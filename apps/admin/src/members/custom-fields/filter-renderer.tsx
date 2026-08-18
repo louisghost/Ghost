@@ -1,6 +1,6 @@
 import React, {useEffect} from 'react';
-import {CUSTOM_FIELD_OPERATORS} from './member-fields';
-import {CUSTOM_FIELD_SET_OPERATORS} from './custom-field-addressing';
+import {CUSTOM_FIELD_OPERATORS} from '@/members/member-fields';
+import {CUSTOM_FIELD_SET_OPERATORS} from './addressing';
 import {FilterSegmentInput, FilterSegmentSelect} from '@tryghost/shade/patterns';
 import {createOperatorOptions} from '@/shared/filters';
 import {memberCustomFieldParts, useBrowseMemberCustomFieldsIncludingArchived} from '@tryghost/admin-x-framework/api/member-custom-fields';

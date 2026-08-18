@@ -1,12 +1,12 @@
-import {CUSTOM_FIELD_SET_OPERATORS, customFieldAddressing} from './custom-field-addressing';
+import {CUSTOM_FIELD_SET_OPERATORS, customFieldAddressing} from './addressing';
 import {FILTER_TYPES, filterType} from '@/shared/filters';
 import {memberCustomFieldKind} from '@tryghost/admin-x-framework/api/member-custom-fields';
-import type {FieldDescriptor, FieldProvider, FilterTypeId, OperatorId} from '@/shared/filters';
+import type {FieldDescriptor, FieldProvider, FilterTypeId} from '@/shared/filters';
 import type {MemberCustomField, MemberCustomFieldKind} from '@tryghost/admin-x-framework/api/member-custom-fields';
 
 // A defined custom field, described by the type its values actually hold.
 //
-// The catalogue already has one entry answering for any custom field, which reads every value
+// The catalog already has one entry answering for any custom field, which reads every value
 // as text. That entry stays and is what makes a filter readable before the definitions arrive,
 // or when it names a field that has since been deleted. These entries are the more precise
 // reading laid over it: once a site's fields are known, a date field is compared as a date.
@@ -36,7 +36,7 @@ export interface CustomFieldDefinition {
 }
 
 function filterTypeFor(type: MemberCustomField['type']): FilterTypeId {
-    return FILTER_TYPE_FOR_KIND[memberCustomFieldKind(type)] ?? 'text';
+    return FILTER_TYPE_FOR_KIND[memberCustomFieldKind(type)];
 }
 
 /**
@@ -52,27 +52,25 @@ export function customFieldDescriptor(definition: CustomFieldDefinition): FieldD
     const type = filterTypeFor(definition.type);
     const isComposite = type === 'composite';
     const valueType = isComposite ? partFilterType() : type;
-    const operators: readonly OperatorId[] = isComposite
-        ? [...FILTER_TYPES[partFilterType()].operators, ...CUSTOM_FIELD_SET_OPERATORS]
-        : [...FILTER_TYPES[type].operators, ...CUSTOM_FIELD_SET_OPERATORS];
 
+    // A site's field says at runtime which type it is, so this is the one place the type cannot
+    // be a literal and the descriptor cannot pick its branch of the union. The operators are the
+    // ones `describeField` derives anyway, so nothing here narrows past what the type can write.
     return {
         key: `custom_field.${definition.key}`,
+        icon: 'text',
         type: valueType,
         // Bound to this field's key: a named entry resolves by exact key, so there is no
         // parameter to read it from the way the shared entry does.
         addressing: customFieldAddressing(definition.key),
-        operators,
         ui: {
             label: definition.name,
             type: 'custom',
-            component: 'custom-field',
-            control: FILTER_TYPES[valueType].control,
             defaultOperator: isComposite
                 ? CUSTOM_FIELD_SET_OPERATORS[0]
                 : filterType(type).defaultOperator ?? CUSTOM_FIELD_SET_OPERATORS[0]
         }
-    };
+    } as FieldDescriptor;
 }
 
 /** The value control a field's own type asks for, used by the pill's value segment. */

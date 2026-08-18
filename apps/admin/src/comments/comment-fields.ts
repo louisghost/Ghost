@@ -9,7 +9,7 @@ import type {FieldDescriptor} from '@/shared/filters';
 
 const COMMENT_FIELDS: FieldDescriptor[] = [
     {
-        key: 'status',
+        key: 'status', icon: 'person-circle',
         type: 'scalar',
         operators: ['is'],
         options: [
@@ -19,12 +19,12 @@ const COMMENT_FIELDS: FieldDescriptor[] = [
         ui: {label: 'Status', searchable: false, hideOperatorSelect: true}
     },
     withPastRelativeOperator({
-        key: 'created_at',
+        key: 'created_at', icon: 'calendar',
         type: 'timestamp',
         ui: {label: 'Date'}
     }),
     {
-        key: 'body',
+        key: 'body', icon: 'text',
         type: 'text',
         operators: ['contains', 'does-not-contain'],
         // The predicate is keyed `body`, but the column holding the text is `html`.
@@ -38,7 +38,7 @@ const COMMENT_FIELDS: FieldDescriptor[] = [
         }
     },
     {
-        key: 'post',
+        key: 'post', icon: 'text',
         type: 'scalar',
         operators: ['is', 'is-not'],
         addressing: columnAddressing({field: 'post_id'}),
@@ -51,7 +51,7 @@ const COMMENT_FIELDS: FieldDescriptor[] = [
         }
     },
     {
-        key: 'author',
+        key: 'author', icon: 'text',
         type: 'scalar',
         operators: ['is', 'is-not'],
         addressing: columnAddressing({field: 'member_id'}),
@@ -64,7 +64,7 @@ const COMMENT_FIELDS: FieldDescriptor[] = [
         }
     },
     {
-        key: 'reported',
+        key: 'reported', icon: 'text',
         // A yes or no stored as a count: any reports at all is yes, exactly none is no.
         type: 'count',
         valueConfig: {threshold: 0, absentForm: 'equals'},

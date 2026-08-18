@@ -2,7 +2,7 @@ import {FIELD_TYPES, FIELD_TYPE_IDS, subFieldsOf, type FieldKind, type FieldType
 import {csvColumnsForField} from '@tryghost/custom-field-types/csv';
 import {Meta, createMutation, createQuery, createQueryWithId} from '../utils/api/hooks';
 
-// Re-exported so the import mapping can recognise a custom_fields.* column (same reason
+// Re-exported so the import mapping can recognize a custom_fields.* column (same reason
 // as the re-exports below).
 export {isCustomFieldColumn} from '@tryghost/custom-field-types/csv';
 
@@ -124,7 +124,7 @@ export type MemberCustomFieldCsvColumn = {
 
 /**
  * The CSV import mapping targets for a set of custom fields: one per column the export
- * writes, labelled for the field (and sub-field, for a composite). Column names come from
+ * writes, labeled for the field (and sub-field, for a composite). Column names come from
  * the shared codec the exporter writes and the importer reads, so a target is exactly a
  * round-tripping column rather than one hand-kept in sync.
  */
@@ -167,10 +167,9 @@ export const memberCustomFieldParts = <T extends FieldType>(type: T): MemberCust
  *
  * Exposed alongside the parts helper because admin needs it for the same reason: anything
  * that compares or orders a value has to know which of those it is, without enumerating the
- * types itself. Falls back to text for a type this build has never heard of, which is what
- * an older admin talking to a newer server sees.
+ * types itself.
  */
-export const memberCustomFieldKind = (type: FieldType): FieldKind => FIELD_TYPES[type]?.kind ?? 'text';
+export const memberCustomFieldKind = (type: FieldType): FieldKind => FIELD_TYPES[type].kind;
 
 export interface MemberCustomFieldsResponseType {
     meta?: Meta;

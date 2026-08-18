@@ -20,7 +20,7 @@ export interface FieldAddress {
     values: unknown[];
 }
 
-/** A node recognised as this field's, and the comparator carrying its value. */
+/** A node recognized as this field's, and the comparator carrying its value. */
 export interface MatchedValue {
     comparator: ValueComparator;
     /** The predicate field key, when the addressing determines it rather than the context. */
@@ -30,7 +30,7 @@ export interface MatchedValue {
 }
 
 /**
- * A node this addressing recognises: either a complete predicate it answers alone
+ * A node this addressing recognizes: either a complete predicate it answers alone
  * (presence, which has no value to interpret), or a value for the semantics to read.
  */
 export type CompoundMatch =
@@ -53,14 +53,16 @@ interface FieldAddressingBase {
  * writes them are declared together, because offering one without the other would advertise an
  * operator that serializes to nothing and drops itself from the query.
  */
-type FieldAddressingPresence =
-    | {presenceOperators?: undefined; addressPresence?: undefined}
-    | {
-        presenceOperators: readonly PresenceOperator[];
-        addressPresence: (predicate: FilterPredicate, ctx: CodecContext) => string[] | null;
-    };
+/** An addressing with no notion of presence: a column is always set, so it cannot be asked. */
+export type PlainAddressing = FieldAddressingBase & {presenceOperators?: undefined; addressPresence?: undefined};
 
-export type FieldAddressing = FieldAddressingBase & FieldAddressingPresence;
+/** An addressing that can answer whether a value exists at all, which only a relation can. */
+export type PresenceAddressing = FieldAddressingBase & {
+    presenceOperators: readonly PresenceOperator[];
+    addressPresence: (predicate: FilterPredicate, ctx: CodecContext) => string[] | null;
+};
+
+export type FieldAddressing = PlainAddressing | PresenceAddressing;
 
 /** Clauses joined into one filter term, grouped only when there is more than one. */
 function combine(clauses: string[], join: 'and' | 'or' = 'and', group = false): string {
@@ -84,7 +86,7 @@ function writtenClauses(written: SerializedValue, valueKey: string): {clauses: s
 }
 
 /** The field's key is the NQL key, unless `config.field` renames it. */
-export function columnAddressing(config?: {field?: string}): FieldAddressing {
+export function columnAddressing(config?: {field?: string}): PlainAddressing {
     const keyFor = (ctx: CodecContext) => config?.field ?? ctx.key;
 
     return {
@@ -104,7 +106,7 @@ export function columnAddressing(config?: {field?: string}): FieldAddressing {
 }
 
 /**
- * A node read as the group of clauses it is, so a vocabulary that wrote several can recognise
+ * A node read as the group of clauses it is, so a vocabulary that wrote several can recognize
  * them together. A single clause is a group of one, which is how a value that collapses to one
  * clause is still found.
  */
@@ -135,9 +137,13 @@ function toPredicate(matched: MatchedValue, parsed: SemanticValue, ctx: CodecCon
 }
 
 /**
- * One grammar plus one vocabulary makes a codec. Everything either side knows stays on its
- * own side: the addressing never inspects an operator it hasn't claimed as presence, and
- * the semantics never sees a field name.
+ * One grammar plus one vocabulary makes a codec, and each keeps to its own side: the
+ * addressing does not inspect an operator it has not claimed as presence, and a vocabulary is
+ * handed values rather than the field they came from.
+ *
+ * A vocabulary writing several clauses is the exception — it has to name the keys it writes,
+ * as `subscriptionSemantics` does for `email_disabled`. It still never learns the key of the
+ * field it is serving, which is the addressing's to know.
  */
 export function composeCodec<TOperator extends OperatorId>(
     addressing: FieldAddressing,

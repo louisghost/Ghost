@@ -1,13 +1,5 @@
-// Every operator this engine knows, named once.
-//
-// An operator id is not a free string. It has to satisfy three agreements at once: a
-// vocabulary must be able to encode it into NQL, that same vocabulary must read it back out,
-// and the picker must be able to label it. Nothing enforced any of those while an operator was
-// a `string`, so a typo produced a filter that silently refused to serialize.
-//
-// The union closes the naming half. The encoding half is closed alongside it: each vocabulary
-// declares which of these it can express, and a type may only advertise operators drawn from
-// that set — see the `satisfies` clauses in filter-registry.ts.
+// Every operator this engine knows. A type may only advertise operators its own vocabulary
+// can encode, which filter-registry.ts enforces with `NoInfer`.
 
 /** Operators that ask something of a value, and so belong to a type. */
 export const VALUE_OPERATORS = [

@@ -1,5 +1,5 @@
 import {getCompoundChildren, readNegatedString} from '@/shared/filters';
-import type {AstNode, CompoundMatch, FieldAddressing, FieldDescriptor, FieldProvider, SemanticValue, SerializedValue, ValueSemantics} from '@/shared/filters';
+import type {AstNode, CompoundMatch, FieldDescriptor, PlainAddressing, FieldProvider, SemanticValue, SerializedValue, ValueSemantics} from '@/shared/filters';
 
 // Whether a member takes one newsletter.
 //
@@ -61,7 +61,7 @@ export function newsletterSubscriptionSemantics(slug?: string): ValueSemantics<'
  * a saved filter naming one newsletter reads back as that newsletter — including one this site
  * no longer has — instead of being re-attributed to whichever entry was tried first.
  */
-export function newsletterAddressing(slug?: string): FieldAddressing {
+export function newsletterAddressing(slug?: string): PlainAddressing {
     return {
         address(predicate, ctx) {
             return (slug ?? ctx.params.slug) ? {valueKey: SLUG_ATTRIBUTE, values: predicate.values} : null;
@@ -143,6 +143,7 @@ export interface NewsletterDefinition {
 export function newsletterDescriptor(newsletter: NewsletterDefinition): FieldDescriptor {
     return {
         key: `${KEY_PREFIX}${newsletter.slug}`,
+        icon: 'newspaper',
         semantics: newsletterSubscriptionSemantics(newsletter.slug),
         addressing: newsletterAddressing(newsletter.slug),
         operators: ['is'],
@@ -167,6 +168,7 @@ export function newsletterProvider(newsletters: readonly NewsletterDefinition[] 
 /** The entry answering for every newsletter, including one this build has not heard of. */
 export const NEWSLETTER_FIELD: FieldDescriptor = {
     key: `${KEY_PREFIX}:slug`,
+    icon: 'newspaper',
     semantics: newsletterSubscriptionSemantics(),
     addressing: newsletterAddressing(),
     operators: ['is'],

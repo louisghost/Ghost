@@ -1,7 +1,7 @@
-import {buildMemberFields, canReadMemberFilter} from './member-filter-catalogue';
+import {buildMemberFields, canReadMemberFilter} from './member-filter-catalog';
 import {describe, expect, it} from 'vitest';
 import {parseMemberFilter, serializeMemberFilters} from './member-filter-query';
-import type {MemberFields} from './member-filter-catalogue';
+import type {MemberFields} from './member-filter-catalog';
 
 // What layering a site's own definitions over the parameterised entries is supposed to
 // guarantee: more precision when they are known, and no loss of anything when they are not.

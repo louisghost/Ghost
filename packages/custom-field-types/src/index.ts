@@ -21,7 +21,7 @@ import {z} from 'zod';
  * cleared. That is why every part accepts empty regardless of its own rule — emptying is
  * a statement about the write, not about the part.
  *
- * A name nobody recognises is an error rather than a silent drop, at both depths. A
+ * A name nobody recognizes is an error rather than a silent drop, at both depths. A
  * misspelled field key is refused by the values service, which alone knows which fields a
  * site has defined; a misspelled part is refused here, because a type's parts are declared
  * in this file and nowhere else. Each is enforced where the names are known.
@@ -113,7 +113,7 @@ const postalCode = () => text().max(32, {error: 'Use 32 characters or fewer.'});
  * arbiter of it for every member of every site. The collection form can offer countries to
  * pick from without this deciding which ones exist.
  *
- * Case is normalised so that `gb` and `GB` are not two values for one place, which a
+ * Case is normalized so that `gb` and `GB` are not two values for one place, which a
  * filter for either would silently half-miss.
  *
  * Checked as two ASCII letters on the way in rather than by length on the way out, because
@@ -187,7 +187,7 @@ export const FIELD_TYPES = defineFieldTypes({
     short_text: {kind: 'text', value: shortText()},
     long_text: {kind: 'text', value: longText()},
     // An address is a delivery address, so its bounds are what a courier will accept
-    // rather than what the column could hold. Modelled on Stripe's Address object.
+    // rather than what the column could hold. Modeled on Stripe's Address object.
     address: record({
         line1: shortText(),
         line2: shortText(),

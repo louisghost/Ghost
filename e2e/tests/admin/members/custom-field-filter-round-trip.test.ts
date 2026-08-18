@@ -60,7 +60,7 @@ test.describe('Ghost Admin - Filter members by custom fields', () => {
         await expect(sidebar.getNavLink(viewName)).not.toHaveAttribute('aria-current', 'page');
 
         // Reopen it: the filter round-trips (the view goes active again only if the
-        // reopened NQL re-serialises to the exact saved string), the custom-field
+        // reopened NQL re-serializes to the exact saved string), the custom-field
         // filter is present, and the same member is matched.
         await sidebar.getNavLink(viewName).click();
 

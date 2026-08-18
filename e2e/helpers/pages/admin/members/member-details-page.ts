@@ -142,7 +142,7 @@ export class MemberDetailsPage extends AdminPage {
 
     /**
      * Set a composite custom field's value: one editor holding an input per part, each
-     * labelled by the part rather than the field. Keys are the part labels as shown,
+     * labeled by the part rather than the field. Keys are the part labels as shown,
      * e.g. {'Address line 1': '1 King St', City: 'London'}.
      */
     async setAddressCustomFieldValue(fieldName: string, parts: Record<string, string>): Promise<void> {

@@ -57,7 +57,7 @@ export function hasFieldKey(node: AstNode, fieldKeys: ReadonlySet<string>): bool
 
 /**
  * Fields whose NQL names their key in a clause value cannot be reached by the key-based
- * dispatch below, so their codecs recognise a whole node themselves. Tried before it.
+ * dispatch below, so their codecs recognize a whole node themselves. Tried before it.
  */
 export function dispatchCompoundNode<TFields extends Record<string, FilterField>>(node: AstNode, fields: TFields, timezone: string): ParsedPredicate | null {
     for (const [pattern, definition] of Object.entries(fields)) {

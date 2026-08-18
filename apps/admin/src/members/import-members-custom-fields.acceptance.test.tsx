@@ -284,7 +284,7 @@ describe('Import members custom fields', () => {
         fakeCustomFieldsWorld();
         fakeAdminEndpoint('POST', '/members/custom_fields/', {
             errors: [{
-                // As Ghost serialises a host limit: a generic summary in `message`, the sentence
+                // As Ghost serializes a host limit: a generic summary in `message`, the sentence
                 // that explains the refusal in `context`.
                 message: 'Cannot create custom field.',
                 context: 'Custom fields are limited to 20 per site. Delete a field you no longer need to make room.',
@@ -435,7 +435,7 @@ describe('Import members custom fields', () => {
             fakeCustomFieldsWorld();
             fakeAdminEndpoint('POST', '/members/upload/', {
                 errors: [{
-                    // As Ghost serialises it: generic summary in `message`, the sentence that
+                    // As Ghost serializes it: generic summary in `message`, the sentence that
                     // explains the refusal in `context`.
                     message: 'Cannot import members.',
                     context: 'Woah there, that is a lot of members.',

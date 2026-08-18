@@ -1,4 +1,4 @@
-import {DEFAULT_DATE_OPERATOR} from './filter-date';
+import {DATE_OPERATOR_LABELS, DEFAULT_DATE_OPERATOR} from './filter-date';
 import {
     PLAIN_DATE_OPERATORS,
     SCALAR_VALUE_OPERATORS,
@@ -22,9 +22,13 @@ export interface FilterTypeDefinition<TOperator extends OperatorId = OperatorId,
     operators: readonly TOperator[];
     /** Becomes the field's `ui.type` unless the field sets its own. */
     control: FilterControl;
+    /**
+     * What this type's operators are called in the picker. An operator id means different
+     * things to different types — `is-or-greater` is "on or after" for a moment in time and
+     * "is at least" for a number — so the wording belongs to the type, not to the id.
+     */
+    labels?: Partial<Record<TOperator, string>>;
     defaultOperator?: OperatorId;
-    /** Filters of this type must be re-read once the site timezone resolves. */
-    timezoneSensitive?: boolean;
 }
 
 
@@ -34,8 +38,8 @@ function defineFilterType<TOperator extends OperatorId, TConfig>(definition: {
     // checked against it. Without it, an unencodable operator would widen the set and compile.
     operators: readonly NoInfer<TOperator>[];
     control: FilterControl;
+    labels?: Partial<Record<NoInfer<TOperator>, string>>;
     defaultOperator?: NoInfer<TOperator>;
-    timezoneSensitive?: boolean;
 }): FilterTypeDefinition<TOperator, TConfig> {
     return definition;
 }
@@ -63,7 +67,8 @@ export const FILTER_TYPES = {
         semantics: numberSemantics,
         // `is-or-greater` and `is-or-less` are encodable but not offered here.
         operators: ['is', 'is-greater', 'is-less'],
-        control: 'number'
+        control: 'number',
+        labels: {'is-greater': 'is greater than', 'is-less': 'is less than'}
     }),
     /** An instant. Bounds a whole day in the site's timezone, so the zone changes what it means. */
     timestamp: defineFilterType({
@@ -71,14 +76,15 @@ export const FILTER_TYPES = {
         // The relative pair is encodable; a field opts into it rather than every timestamp offering it.
         operators: PLAIN_DATE_OPERATORS,
         control: 'date',
-        defaultOperator: DEFAULT_DATE_OPERATOR,
-        timezoneSensitive: true
+        labels: DATE_OPERATOR_LABELS,
+        defaultOperator: DEFAULT_DATE_OPERATOR
     }),
     /** A calendar day, stored as ISO `YYYY-MM-DD` and compared as text. No time, no zone. */
     plain_date: defineFilterType({
         semantics: plainDateSemantics,
         operators: PLAIN_DATE_OPERATORS,
         control: 'date',
+        labels: DATE_OPERATOR_LABELS,
         defaultOperator: DEFAULT_DATE_OPERATOR
     }),
     /** A yes or no stored as a count. Each field configures its own threshold and negative. */
@@ -100,8 +106,8 @@ export type FilterTypeId = keyof typeof FILTER_TYPES;
 export interface FilterTypeFacts {
     operators: readonly OperatorId[];
     control: FilterControl;
+    labels?: Partial<Record<OperatorId, string>>;
     defaultOperator?: OperatorId;
-    timezoneSensitive?: boolean;
 }
 
 /** Reads a type as the facts common to all of them, so callers need not narrow. */

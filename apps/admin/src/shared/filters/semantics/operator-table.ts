@@ -1,15 +1,8 @@
 import type {NqlComparator, NqlSymbol} from '@/shared/filters/nql-tokens';
 import type {OperatorId} from '@/shared/filters/filter-operators';
 
-// One table per vocabulary, read in both directions.
-//
-// An operator used to be declared twice: once as the symbol that writes it, once as the NQL
-// comparator that reads it back. Nothing tied the two together, so a vocabulary could gain a
-// symbol it had no way of parsing and still compile — the kind of asymmetry only a round-trip
-// test would catch, and tests are not where this should be caught.
-//
-// Declaring the pair once makes that impossible: the writing side and the reading side are
-// derived from the same entries, so an operator either does both or neither.
+// One table per vocabulary, read in both directions. An operator is declared once as a symbol
+// and comparator pair, so it can either be written and read back, or neither.
 
 export interface OperatorEncoding {
     /** What follows `key:` when this operator is written. */
@@ -30,11 +23,8 @@ export interface BidirectionalOperators<TOperator extends OperatorId> {
 }
 
 /**
- * Both directions of a table, derived from its entries.
- *
- * The reverse index is built here rather than declared, so it cannot disagree with the
- * forward one. Two operators sharing a comparator would make the reverse ambiguous, so the
- * first entry wins and the table is expected to be written unambiguously — a vocabulary that
+ * The reverse index is derived rather than declared, so it cannot disagree with the forward
+ * one. Two operators sharing a comparator would be ambiguous; the first entry wins — a vocabulary that
  * genuinely needs two readings of one comparator (text, whose anchors carry meaning the
  * comparator does not) parses by hand instead.
  */

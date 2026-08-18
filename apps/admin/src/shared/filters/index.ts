@@ -15,3 +15,8 @@ export * from './filter-registry';
 export * from './filter-relative-date';
 export * from './filter-types';
 export * from './resolve-field';
+
+export type {FieldIcon} from './filter-providers';
+
+export {domainField} from './filter-providers';
+export type {PlainAddressing, PresenceAddressing} from './filter-addressing';
