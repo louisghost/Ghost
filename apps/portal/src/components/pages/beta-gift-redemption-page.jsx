@@ -7,6 +7,7 @@ import GiftCard from '../common/gift-card';
 import GiftDetailsToggle from '../common/gift-details-toggle';
 import InputForm from '../common/input-form';
 import {ValidateInputForm} from '../../utils/form';
+import {getSiteDateString} from '../../utils/date-time';
 import {getGiftDurationLabel, getGiftIntroduction, getGiftRedemptionErrorMessage} from '../../utils/gift-redemption-notification';
 import {t} from '../../utils/i18n';
 import useCardTilt from '../../utils/use-card-tilt';
@@ -78,7 +79,7 @@ const BetaGiftRedemptionPage = () => {
             status: 'error',
             autoHide: false,
             closeable: true,
-            message: getGiftRedemptionErrorMessage()
+            message: getGiftRedemptionErrorMessage({code: 'GIFT_NOT_FOUND'})
         });
         doAction('closePopup');
     }, [doAction, gift]);
@@ -185,7 +186,7 @@ const BetaGiftRedemptionPage = () => {
     };
     const headerText = getGiftIntroduction({buyerName, cadence: gift.cadence, duration: gift.duration, siteTitle});
     const expiryLabel = gift.expires_at
-        ? new Date(gift.expires_at).toLocaleDateString(undefined, {day: 'numeric', month: 'short', year: 'numeric'})
+        ? getSiteDateString(gift.expires_at, {locale: site?.locale, timezone: site?.timezone})
         : '';
     const benefits = gift.tier.benefits || [];
     const tierDescription = gift.tier.description || '';
