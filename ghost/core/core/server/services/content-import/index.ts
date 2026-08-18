@@ -14,6 +14,7 @@ function makeImporter(): ContentCSVImporter {
     const models = require('../../models');
     const lexicalLib = require('../../lib/lexical');
     const jobsService = require('../jobs');
+    const settingsCache = require('../../../shared/settings-cache');
     const urlService = require('../url');
     const ObjectID = require('bson-objectid').default;
 
@@ -39,7 +40,8 @@ function makeImporter(): ContentCSVImporter {
         store: new ImportRunStore(),
         // Degrades to the 404 URL for a post the URL service cannot route yet (e.g. a draft).
         urlForPost: post => urlService.getUrlForResource({...post.toJSON(), type: 'posts'}, {absolute: true}),
-        newRunId: () => new ObjectID().toHexString()
+        newRunId: () => new ObjectID().toHexString(),
+        getTimezone: () => settingsCache.get('timezone')
     });
 }
 
