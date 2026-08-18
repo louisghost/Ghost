@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {page, userEvent} from 'vitest/browser';
 
-import {fakeAdminEndpoint, fakeMembers, member, renderAdminApp} from '@test-utils/acceptance';
+import {fakeAdminEndpoint, fakeMemberCustomFields, fakeMembers, member, renderAdminApp} from '@test-utils/acceptance';
 import {membersScreen} from './members.screen';
 
 const FLAGS = {labs: {membersCustomFields: true}};
@@ -27,7 +27,7 @@ const EXPORTED_CSV = 'email,custom_fields.nickname\nada@example.com,Countess\n';
 function fakeCustomFieldsWorld() {
     const fields: Array<Record<string, unknown>> = [];
     fakeMembers([member({name: 'Ada Lovelace'})]);
-    fakeAdminEndpoint('GET', '/members/custom_fields/', () => ({members_custom_fields: fields}));
+    fakeMemberCustomFields(() => fields);
     const uploadApi = fakeAdminEndpoint('POST', '/members/upload/', {
         meta: {stats: {imported: 1, invalid: []}, import_label: {name: 'Import', slug: 'import'}}
     });
@@ -465,7 +465,7 @@ describe('Import members custom fields', () => {
     // A query whose only job is to add targets to a list must not be able to stop the import.
     it('imports with membership fields when custom fields cannot be loaded', async () => {
         fakeMembers([member({name: 'Ada Lovelace'})]);
-        fakeAdminEndpoint('GET', '/members/custom_fields/', {errors: [{message: 'nope'}]}, {status: 500});
+        fakeAdminEndpoint('GET', /^\/members\/custom_fields\/(\?|$)/, {errors: [{message: 'nope'}]}, {status: 500});
         const uploadApi = fakeAdminEndpoint('POST', '/members/upload/', {
             meta: {stats: {imported: 1, invalid: []}, import_label: {name: 'Import', slug: 'import'}}
         });

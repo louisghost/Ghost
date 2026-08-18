@@ -57,8 +57,10 @@ export type ResourceSemantics<TEntity> =
     | { kind: "passthrough" };
 
 export interface ResourceOptions<TEntity> {
-    /** Admin API path segment and envelope key, e.g. 'tags' → GET /tags/. */
+    /** Admin API path segment, e.g. 'tags' → GET /tags/. */
     resource: string;
+    /** Envelope key, when it differs from the path — a nested resource like 'members/custom_fields'. */
+    envelopeKey?: string;
     semantics: ResourceSemantics<TEntity>;
     /** Browse paths to leave to lower-priority handlers (shell chrome like the sidebar count probe). */
     skip?: (apiPath: string) => boolean;
@@ -114,7 +116,7 @@ function uncoveredFilterComponents(filter: string | undefined, covers: string[])
  *     trivial behaviors; filter components outside `covers` respond 418
  *     instead of silently serving the full world.
  */
-export function defineResource<TEntity>({ resource, semantics, skip }: ResourceOptions<TEntity>) {
+export function defineResource<TEntity>({ resource, envelopeKey = resource, semantics, skip }: ResourceOptions<TEntity>) {
     return function fakeResource(respondWith: RespondWith<TEntity>): ResourceCapture {
         const requests: BrowseQuery[] = [];
 
@@ -148,7 +150,7 @@ export function defineResource<TEntity>({ resource, semantics, skip }: ResourceO
             }
 
             return HttpResponse.json(
-                browseResponse(resource, matching, {
+                browseResponse(envelopeKey, matching, {
                     page: query.page,
                     limit: query.limit,
                 })
@@ -265,6 +267,14 @@ export function fakeMembers(members: RespondWith<Member>, { labels = [], tiers =
 export const fakeUsers = defineResource<StaffUser>({ resource: "users", semantics: { kind: "passthrough" } });
 export const fakeInvites = defineResource<StaffInvite>({ resource: "invites", semantics: { kind: "passthrough" } });
 export const fakeRoles = defineResource<StaffRole>({ resource: "roles", semantics: { kind: "passthrough" } });
+/**
+ * Member custom fields. The members screen browses these both plainly and filtered to
+ * include archived ones, so this is a resource fake rather than a hand-declared endpoint:
+ * a spec should not have to know which query strings the screen happens to send.
+ */
+const memberCustomFieldsResource = defineResource({ resource: "members/custom_fields", envelopeKey: "members_custom_fields", semantics: { kind: "passthrough" } });
+export const fakeMemberCustomFields = memberCustomFieldsResource;
+
 const themesResource = defineResource({ resource: "themes", semantics: { kind: "passthrough" } });
 /** Themes list fake (passthrough): installed/active state is declared by the spec. */
 export const fakeThemes = themesResource;
