@@ -1,5 +1,6 @@
-import {defineFields} from './filter-types';
 import {describe, expect, expectTypeOf, it} from 'vitest';
+
+const defineFields = <T extends Record<string, FilterField>>(fields: T): T => fields;
 import type {CodecContext, FilterCodec, FilterField, ParsedPredicate} from './filter-types';
 
 describe('defineFields', () => {

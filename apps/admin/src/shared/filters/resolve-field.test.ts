@@ -1,6 +1,8 @@
-import {defineFields} from './filter-types';
 import {describe, expect, it} from 'vitest';
 import {resolveField} from './resolve-field';
+import type {FilterField} from './filter-types';
+
+const defineFields = <T extends Record<string, FilterField>>(fields: T): T => fields;
 
 const fields = defineFields({
     status: {

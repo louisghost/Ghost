@@ -1,5 +1,6 @@
 import React, {useEffect} from 'react';
-import {CUSTOM_FIELD_OPERATORS, CUSTOM_FIELD_SET_OPERATORS} from './member-fields';
+import {CUSTOM_FIELD_OPERATORS} from './member-fields';
+import {CUSTOM_FIELD_SET_OPERATORS} from './custom-field-addressing';
 import {FilterSegmentInput, FilterSegmentSelect} from '@tryghost/shade/patterns';
 import {createOperatorOptions} from '@/shared/filters';
 import {memberCustomFieldParts, useBrowseMemberCustomFieldsIncludingArchived} from '@tryghost/admin-x-framework/api/member-custom-fields';
@@ -47,13 +48,13 @@ const CustomFieldFilterRenderer: React.FC<CustomRendererProps<string>> = ({field
 
     useEffect(() => {
         // A read-only pill never rewrites its own operator; it just displays what's set.
-        if (readOnly || !onOperatorChange || operators.includes(operator)) {
+        if (readOnly || !onOperatorChange || operators.some(candidate => candidate === operator)) {
             return;
         }
         onOperatorChange('is-set');
     }, [readOnly, operator, operators, onOperatorChange]);
 
-    const needsValue = !CUSTOM_FIELD_SET_OPERATORS.includes(operator);
+    const needsValue = !CUSTOM_FIELD_SET_OPERATORS.some(candidate => candidate === operator);
     const partOptions = [{value: '', label: 'Any'}, ...parts];
 
     return (

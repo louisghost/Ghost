@@ -1,3 +1,5 @@
+import {FILTER_TYPES} from './filter-registry';
+import type {FieldDescriptor} from './filter-providers';
 import type {FilterField} from './filter-types';
 
 /**
@@ -12,6 +14,8 @@ import type {FilterField} from './filter-types';
 export const RELATIVE_PAST_OPERATOR = 'in-the-last';
 export const RELATIVE_FUTURE_OPERATOR = 'in-the-next';
 
+type RelativeDateOperator = typeof RELATIVE_PAST_OPERATOR | typeof RELATIVE_FUTURE_OPERATOR;
+
 export const RELATIVE_DATE_OPERATOR_LABELS: Record<string, string> = {
     [RELATIVE_PAST_OPERATOR]: 'in the last',
     [RELATIVE_FUTURE_OPERATOR]: 'in the next'
@@ -25,14 +29,26 @@ export function fieldHasRelativeOperator(field: FilterField): boolean {
     return field.operators.some(isRelativeDateOperator);
 }
 
-/** Returns the field with the past-leaning relative operator appended. */
-export function withPastRelativeOperator<T extends FilterField>(field: T): T {
-    return {...field, operators: [...field.operators, RELATIVE_PAST_OPERATOR]};
+/**
+ * The same descriptor, offering a relative operator on top of what its type advertises.
+ *
+ * Opt-in per field rather than per type, because only some dates are worth asking "in the
+ * last 30 days" of, and the direction is a property of the field: a signup date looks back,
+ * a renewal date looks forward.
+ */
+function withRelativeOperator(descriptor: FieldDescriptor, operator: RelativeDateOperator): FieldDescriptor {
+    const declared = descriptor.operators
+        ?? (descriptor.type ? FILTER_TYPES[descriptor.type].operators : []);
+
+    return {...descriptor, operators: [...declared, operator]};
 }
 
-/** Returns the field with the future-leaning relative operator appended. */
-export function withFutureRelativeOperator<T extends FilterField>(field: T): T {
-    return {...field, operators: [...field.operators, RELATIVE_FUTURE_OPERATOR]};
+export function withPastRelativeOperator(descriptor: FieldDescriptor): FieldDescriptor {
+    return withRelativeOperator(descriptor, RELATIVE_PAST_OPERATOR);
+}
+
+export function withFutureRelativeOperator(descriptor: FieldDescriptor): FieldDescriptor {
+    return withRelativeOperator(descriptor, RELATIVE_FUTURE_OPERATOR);
 }
 
 // `yyyymmdd` is a calendar date in the site's timezone. We construct a Date in the

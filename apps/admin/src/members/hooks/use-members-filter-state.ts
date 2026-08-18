@@ -49,7 +49,7 @@ function getEnabledFilters(filters: Filter[], fields: MemberFields): Filter[] {
 
 function toSearchParams({baseSearchParams, filters, search, timezone, fields}: ToSearchParamsOptions): URLSearchParams {
     const params = new URLSearchParams(baseSearchParams);
-    const filter = serializeMemberFilters(getEnabledFilters(filters, fields), timezone);
+    const filter = serializeMemberFilters(getEnabledFilters(filters, fields), timezone, fields);
 
     params.delete('filter');
     params.delete('search');
@@ -73,7 +73,7 @@ export function useMembersFilterState(timezone: string): UseMembersFilterStateRe
     const currentQuery = useMemo(() => searchParams.toString(), [searchParams]);
 
     const parsedFilters = useMemo(() => {
-        return getEnabledFilters(parseMemberFilter(filterParam, timezone), fields);
+        return getEnabledFilters(parseMemberFilter(filterParam, timezone, fields), fields);
     }, [filterParam, timezone, fields]);
     const [filters, setDraftFilters] = useState<Filter[]>(parsedFilters);
 
@@ -82,7 +82,7 @@ export function useMembersFilterState(timezone: string): UseMembersFilterStateRe
     }, [searchParams]);
 
     const nql = useMemo(() => {
-        return serializeMemberFilters(getEnabledFilters(filters, fields), timezone);
+        return serializeMemberFilters(getEnabledFilters(filters, fields), timezone, fields);
     }, [filters, timezone, fields]);
 
     useEffect(() => {

@@ -2,7 +2,7 @@ import React, {useMemo} from 'react';
 import {DATE_OPERATOR_LABELS, RELATIVE_DATE_OPERATOR_LABELS, createOperatorOptions, createRelativeDateRenderer, fieldHasRelativeOperator, getTodayInTimezone} from '@/shared/filters';
 import type {FilterFieldConfig, ValueSource} from '@tryghost/shade/patterns';
 import {LucideIcon} from '@tryghost/shade/utils';
-import {commentFields} from './comment-fields';
+import {buildCommentFields} from './comment-filter-catalogue';
 
 interface UseCommentFilterFieldsOptions {
     postValueSource: ValueSource<string>;
@@ -45,7 +45,7 @@ export function useCommentFilterFields({
         const today = getTodayInTimezone(siteTimezone);
 
         return COMMENT_FIELD_ORDER.map((key) => {
-            const field = commentFields[key];
+            const field = buildCommentFields()[key];
             const dateConfig = key === 'created_at'
                 ? {
                     defaultValue: today,

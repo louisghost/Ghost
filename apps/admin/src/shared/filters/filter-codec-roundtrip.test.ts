@@ -1,5 +1,15 @@
-import nql from '@tryghost/nql-lang';
-import {dateCodec, numberCodec, scalarCodec, setCodec, textCodec} from './filter-codecs';
+import {columnAddressing, composeCodec} from './filter-addressing';
+import {dateSemantics, numberSemantics, scalarSemantics, setSemantics, textSemantics} from './semantics';
+import type {ValueConfig} from './semantics';
+import {parseFilterToAst} from './filter-query-core';
+// What the codecs under test are: a vocabulary addressed as a plain column.
+type CodecConfig = ValueConfig & {field?: string};
+const textCodec = (config?: CodecConfig) => composeCodec(columnAddressing(config), textSemantics());
+const scalarCodec = (config?: CodecConfig) => composeCodec(columnAddressing(config), scalarSemantics(config));
+const setCodec = (config?: CodecConfig) => composeCodec(columnAddressing(config), setSemantics(config));
+const numberCodec = (config?: CodecConfig) => composeCodec(columnAddressing(config), numberSemantics());
+const dateCodec = (config?: CodecConfig) => composeCodec(columnAddressing(config), dateSemantics());
+
 import {describe, expect, it} from 'vitest';
 import type {CodecContext, FilterCodec, FilterPredicate} from './filter-types';
 
@@ -21,7 +31,11 @@ function roundTrip(codec: FilterCodec, predicate: Omit<FilterPredicate, 'id'>, c
         throw new Error(`serialize returned null for ${predicate.operator}`);
     }
 
-    const node = nql.parse(clauses.join('+'), {preserveRelativeDates: true});
+    const node = parseFilterToAst(clauses.join('+'));
+
+    if (!node) {
+        throw new Error(`could not parse: ${clauses.join('+')}`);
+    }
 
     return codec.parse(node, ctx);
 }

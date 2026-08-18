@@ -275,21 +275,17 @@ export function useMemberFilterFields({
 }: UseMemberFilterFieldsOptions): FilterFieldGroup[] {
     return useMemo(() => {
         const fields = getMemberFields();
-        type MemberFieldKey = keyof typeof fields;
 
         function createFieldConfig(
             key: string,
             overrides: Partial<FilterFieldConfig> = {},
             operatorLabels: Record<string, string> = MEMBER_OPERATOR_LABELS
         ): FilterFieldConfig {
-            let field;
-            if (key.startsWith('newsletters.')) {
-                field = fields['newsletters.:slug'];
-            } else if (key.startsWith('custom_field.')) {
-                field = fields['custom_field.:key'];
-            } else {
-                field = fields[key as MemberFieldKey];
-            }
+            // A newsletter and a custom field are parameterised entries; everything else is
+            // named outright. `resolveField` handles both, so this only has to pick the key.
+            const field = key.startsWith('newsletters.')
+                ? fields['newsletters.:slug']
+                : key.startsWith('custom_field.') ? fields['custom_field.:key'] : fields[key];
 
             return {
                 key,
@@ -306,7 +302,7 @@ export function useMemberFilterFields({
             today: string,
             overrides: Partial<FilterFieldConfig> = {}
         ): FilterFieldConfig {
-            const field = fields[key as MemberFieldKey];
+            const field = fields[key];
             const config = createFieldConfig(key, {defaultValue: today, ...overrides});
 
             return fieldHasRelativeOperator(field)
@@ -376,9 +372,8 @@ export function useMemberFilterFields({
                 // The dropdown entry and the added filter show the field type's own icon
                 // rather than a generic custom-field mark.
                 icon: React.createElement(CustomFieldIcon, {type: field.type, className: 'size-4'}),
-                // Text fields default to "contains" to match native Name/Email; a
-                // composite defaults to whole-field "is set" (the renderer coerces it).
-                defaultOperator: 'contains',
+                // The default operator comes from the field's type via its catalogue entry,
+                // so a date field opens on a date operator rather than "contains".
                 // The field's type decides its parts and operators, so the operator
                 // control lives in the renderer, after any part is chosen.
                 renderOperatorInValue: true,
@@ -444,7 +439,7 @@ export function useMemberFilterFields({
             }
 
             subscriptionFields.push(createFieldConfig('status', {
-                options: [...fields.status.options, {value: 'gift', label: 'Gift subscription'}]
+                options: [...(fields.status?.options ?? []), {value: 'gift', label: 'Gift subscription'}]
             }));
 
             if (multipleActiveSubscriptionsCount > 0) {
