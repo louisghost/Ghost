@@ -1,4 +1,4 @@
-import {type FieldTypePresentation, type MemberCustomField, memberCustomFieldCsvColumns, memberCustomFieldParts} from '../../../src/api/member-custom-fields';
+import {type FieldTypePresentation, type MemberCustomField, formatMemberCustomFieldValue, memberCustomFieldCsvColumns, memberCustomFieldParts} from '../../../src/api/member-custom-fields';
 
 // Compile-time cases: the build failing is the assertion. Each `@ts-expect-error` fails the
 // build if the case it names stops being an error. Declared on one line each, because the
@@ -96,6 +96,46 @@ describe('member custom fields api helpers', () => {
                 {key: 'postal_code', label: 'Postal code'},
                 {key: 'country', label: 'Country'}
             ]);
+        });
+    });
+
+    describe('formatMemberCustomFieldValue', () => {
+        it('returns a scalar value as it stands', () => {
+            expect(formatMemberCustomFieldValue('short_text', 'Editor')).toBe('Editor');
+            expect(formatMemberCustomFieldValue('long_text', 'A longer note')).toBe('A longer note');
+        });
+
+        it('formats a full address as one readable line', () => {
+            expect(formatMemberCustomFieldValue('address', {line1: '1 Main St', line2: '12 apt B', city: 'New York', state: 'NY', postal_code: '00001', country: 'US'}))
+                .toBe('1 Main St, 12 apt B, New York, NY 00001, US');
+        });
+
+        it('pairs state and postal code, and drops missing parts cleanly', () => {
+            expect(formatMemberCustomFieldValue('address', {line1: '1 Main St', city: 'Berlin', postal_code: '10115', country: 'DE'}))
+                .toBe('1 Main St, Berlin, 10115, DE');
+            expect(formatMemberCustomFieldValue('address', {city: 'Berlin'})).toBe('Berlin');
+        });
+
+        // A surface renders its own placeholder, so every unreadable value has to reduce to
+        // the same empty string rather than leaking a raw object or the word "undefined".
+        it('formats an empty or unreadable value as an empty string', () => {
+            expect(formatMemberCustomFieldValue('address', {})).toBe('');
+            expect(formatMemberCustomFieldValue('address', null)).toBe('');
+            expect(formatMemberCustomFieldValue('address', undefined)).toBe('');
+            expect(formatMemberCustomFieldValue('address', ['a', 'b'])).toBe('');
+            // A composite type from a later build: no formatter, so no line.
+            expect(formatMemberCustomFieldValue('unheard_of' as MemberCustomField['type'], {line1: '1 Main St'})).toBe('');
+        });
+
+        // Every part is written through a schema that says it is a string, so one that is
+        // not reached the database by another road. It drops out the way an absent part
+        // does, leaving the parts a publisher can still read and act on.
+        it('drops a part that is not text, and keeps the rest of the value', () => {
+            expect(formatMemberCustomFieldValue('address', {line1: '1 Main St', city: {} as unknown as string, country: 'DE'}))
+                .toBe('1 Main St, DE');
+            expect(formatMemberCustomFieldValue('address', {state: ['NY'] as unknown as string, postal_code: '00001', city: 'New York'}))
+                .toBe('New York, 00001');
+            expect(formatMemberCustomFieldValue('address', {city: 42 as unknown as string})).toBe('');
         });
     });
 });
