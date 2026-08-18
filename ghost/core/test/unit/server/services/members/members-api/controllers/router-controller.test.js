@@ -878,7 +878,7 @@ describe('RouterController', function () {
                 }));
             });
 
-            it('passes gift delivery fields separately and removes client-supplied reserved metadata', async function () {
+            it('passes gift delivery fields without forwarding client metadata', async function () {
                 const controller = createGiftController({tiersService: paidTierService()});
 
                 await controller.createCheckoutSession({
@@ -904,8 +904,7 @@ describe('RouterController', function () {
                 assert.equal(input.recipientName, 'Recipient');
                 assert.equal(input.buyerName, 'Buyer');
                 assert.equal(input.personalMessage, 'Enjoy this gift');
-                assert.equal(input.metadata.ghost_gift_id, undefined);
-                assert.equal(input.metadata.custom_key, 'preserved');
+                assert.equal('metadata' in input, false);
             });
 
             it('rejects when offerId is provided', async function () {
