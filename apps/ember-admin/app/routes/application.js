@@ -27,6 +27,53 @@ function K() {
     return this;
 }
 
+const AUTOMATIONS_REPLAY_SAMPLE_RATE = 0.5;
+const REPLAY_MODE = {
+    BUFFERING_FOR_ERROR_REPLAY: 'buffering-for-error-replay',
+    RECORDING_AUTOMATIONS: 'recording-automations'
+};
+
+function isAutomationsRoute() {
+    const path = window.location.hash.replace(/^#/, '').split('?')[0].replace(/\/+$/, '');
+    return path === '/automations' || path.startsWith('/automations/');
+}
+
+function replayModeForCurrentRoute() {
+    return isAutomationsRoute() ? REPLAY_MODE.RECORDING_AUTOMATIONS : REPLAY_MODE.BUFFERING_FOR_ERROR_REPLAY;
+}
+
+function setupAutomationsSessionReplay(replay) {
+    let activeReplayMode = REPLAY_MODE.BUFFERING_FOR_ERROR_REPLAY;
+    let replayModeChangeQueue = Promise.resolve();
+
+    const syncReplayMode = () => {
+        replayModeChangeQueue = replayModeChangeQueue.then(async () => {
+            let desiredReplayMode = replayModeForCurrentRoute();
+            if (desiredReplayMode === activeReplayMode) {
+                return;
+            }
+
+            await replay.stop();
+
+            // The route may have changed while Replay was stopping
+            desiredReplayMode = replayModeForCurrentRoute();
+            if (desiredReplayMode === REPLAY_MODE.RECORDING_AUTOMATIONS) {
+                await replay.start();
+            } else {
+                await replay.startBuffering();
+            }
+            activeReplayMode = desiredReplayMode;
+        }).catch((error) => {
+            console.error('Error switching Sentry Replay mode:', error); // eslint-disable-line no-console
+        });
+    };
+
+    window.addEventListener('hashchange', syncReplayMode);
+    syncReplayMode();
+
+    return () => window.removeEventListener('hashchange', syncReplayMode);
+}
+
 let shortcuts = {};
 
 shortcuts.esc = {action: 'closeMenus', scope: 'default'};
@@ -192,6 +239,7 @@ export default Route.extend(ShortcutsRoute, {
     },
 
     willDestroy() {
+        this._cleanupAutomationsSessionReplay?.();
         this.ui.cleanupBodyDragHandlers();
     },
 
@@ -203,6 +251,15 @@ export default Route.extend(ShortcutsRoute, {
         if (this.config.sentry_dsn) {
             const sentryConfig = getSentryConfig(this.config.sentry_dsn, this.config.sentry_env, this.config.version);
             Sentry.init(sentryConfig);
+
+            // Keep error-triggered replay buffering everywhere, but record full
+            // sessions in Automations for a sample of production app loads.
+            if (this.config.sentry_env === 'production' && Math.random() < AUTOMATIONS_REPLAY_SAMPLE_RATE) {
+                const replay = Sentry.getClient()?.getIntegrationByName('Replay');
+                if (replay) {
+                    this._cleanupAutomationsSessionReplay = setupAutomationsSessionReplay(replay);
+                }
+            }
         }
 
         if (this.session.isAuthenticated) {
