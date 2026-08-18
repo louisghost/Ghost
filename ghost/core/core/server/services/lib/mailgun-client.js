@@ -96,9 +96,9 @@ module.exports = class MailgunClient {
             }
 
             if (message.disable_tracking) {
-                messageData['o:tracking'] = false;
-                messageData['o:tracking-clicks'] = false;
-                messageData['o:tracking-opens'] = false;
+                messageData['o:tracking'] = 'no';
+                messageData['o:tracking-clicks'] = 'no';
+                messageData['o:tracking-opens'] = 'no';
             } else if (message.track_opens) {
                 messageData['o:tracking-opens'] = true;
             }

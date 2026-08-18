@@ -1,4 +1,5 @@
 const sinon = require('sinon');
+const nock = require('nock');
 const {deferred} = require('../../../../utils/deferred')
 const mail = require('../../../../../core/server/services/mail');
 const settingsCache = require('../../../../../core/shared/settings-cache');
@@ -425,11 +426,29 @@ describe('Mail: Ghostmailer', function () {
         });
 
         it('should explicitly disable Mailgun open and click tracking for transactional messages that require it', async function () {
+            configUtils.set({
+                mail: {
+                    transport: 'mailgun',
+                    from: 'from@default.com',
+                    options: {auth: {api_key: 'key', domain: 'domain.com'}}
+                }
+            });
             sandbox.stub(settingsCache, 'get').withArgs('email_track_opens').returns(true);
 
+            // The transport whitelists and serialises the message before it reaches Mailgun,
+            // so assert on the request body rather than the object handed to sendMail
+            const sendMock = nock('https://api.mailgun.net')
+                .post('/v3/domain.com/messages', function (body) {
+                    const regexList = [
+                        /form-data; name="o:tracking"\r?\n\r?\nno\r?\n--/m,
+                        /form-data; name="o:tracking-opens"\r?\n\r?\nno\r?\n--/m,
+                        /form-data; name="o:tracking-clicks"\r?\n\r?\nno\r?\n--/m
+                    ];
+                    return regexList.every(regex => regex.test(body)) && !/name="disableTracking"/.test(body);
+                })
+                .reply(200, {id: '<message-id@domain.com>', message: 'Queued. Thank you.'});
+
             mailer = new mail.GhostMailer();
-            mailer.state.usingMailgun = true;
-            const sendMailSpy = sandbox.stub(mailer.transport, 'sendMail').resolves({});
 
             await mailer.send({
                 to: 'recipient@example.com',
@@ -438,11 +457,7 @@ describe('Mail: Ghostmailer', function () {
                 disableTracking: true
             });
 
-            const sentMessage = sendMailSpy.firstCall.args[0];
-            assert.equal(sentMessage['o:tracking'], false);
-            assert.equal(sentMessage['o:tracking-opens'], false);
-            assert.equal(sentMessage['o:tracking-clicks'], false);
-            assert.equal(sentMessage.disableTracking, undefined);
+            assert(sendMock.isDone());
         });
 
         it('should not add site ID tag when site ID is missing', async function () {

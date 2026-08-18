@@ -157,10 +157,12 @@ module.exports = class GhostMailer {
             const trackOpens = typeof message.trackOpens === 'boolean' ?
                 message.trackOpens :
                 settingsCache.get('email_track_opens');
+            // nodemailer-mailgun-transport drops falsy option values, so an explicit
+            // opt-out must be Mailgun's string form rather than boolean false
             if (message.disableTracking === true) {
-                messageToSend['o:tracking'] = false;
-                messageToSend['o:tracking-opens'] = false;
-                messageToSend['o:tracking-clicks'] = false;
+                messageToSend['o:tracking'] = 'no';
+                messageToSend['o:tracking-opens'] = 'no';
+                messageToSend['o:tracking-clicks'] = 'no';
             } else if (trackOpens) {
                 messageToSend['o:tracking-opens'] = true;
             }
