@@ -439,6 +439,7 @@ describe('Mail: Ghostmailer', function () {
             });
 
             const sentMessage = sendMailSpy.firstCall.args[0];
+            assert.equal(sentMessage['o:tracking'], false);
             assert.equal(sentMessage['o:tracking-opens'], false);
             assert.equal(sentMessage['o:tracking-clicks'], false);
             assert.equal(sentMessage.disableTracking, undefined);

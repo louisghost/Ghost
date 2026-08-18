@@ -158,6 +158,7 @@ module.exports = class GhostMailer {
                 message.trackOpens :
                 settingsCache.get('email_track_opens');
             if (message.disableTracking === true) {
+                messageToSend['o:tracking'] = false;
                 messageToSend['o:tracking-opens'] = false;
                 messageToSend['o:tracking-clicks'] = false;
             } else if (trackOpens) {

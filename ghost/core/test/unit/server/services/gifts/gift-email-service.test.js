@@ -109,14 +109,17 @@ describe('GiftEmailService', function () {
         for (const field of ['html', 'text']) {
             sinon.assert.match(msg[field], sinon.match('https://example.com/gift/abc-123'));
             sinon.assert.match(msg[field], sinon.match('Gold'));
-            sinon.assert.match(msg[field], sinon.match('one-year'));
         }
+        sinon.assert.match(msg.html, sinon.match('<strong>1</strong>-year'));
+        sinon.assert.match(msg.text, sinon.match('1-year'));
     });
 
     it('formats month cadence correctly', async function () {
         await service.sendPurchaseConfirmation({...defaultData, cadence: 'month'});
 
-        sinon.assert.calledWith(transactionalMailer.send, sinon.match.has('html', sinon.match('one-month')));
+        const message = transactionalMailer.send.firstCall.firstArg;
+        sinon.assert.match(message.html, sinon.match('<strong>1</strong>-month'));
+        sinon.assert.match(message.text, sinon.match('1-month'));
     });
 
     it('formats the expiry date with the active locale', async function () {
@@ -207,6 +210,7 @@ describe('GiftEmailService', function () {
             const result = await service.sendGiftDelivery({
                 recipientEmail: 'recipient@example.com',
                 recipientName: 'Recipient',
+                buyerEmail: 'buyer@example.com',
                 buyerName: 'Buyer',
                 personalMessage: 'Enjoy this gift',
                 token: 'abc-123',
@@ -233,7 +237,9 @@ describe('GiftEmailService', function () {
                 sinon.assert.match(message[field], sinon.match('https://example.com/gift/abc-123'));
             }
             sinon.assert.match(message.plaintext, sinon.match('Buyer has gifted you a 1-year Gold membership to Test Site'));
+            sinon.assert.match(message.plaintext, sinon.match('This message was sent from example.com to recipient@example.com on behalf of Buyer (buyer@example.com).'));
             sinon.assert.match(message.html, sinon.match('<strong>Buyer</strong> has gifted you a <strong>1</strong>-year <strong>Gold</strong> membership to Test Site'));
+            sinon.assert.match(message.html, sinon.match('on behalf of Buyer (<a href="mailto:buyer@example.com"'));
             sinon.assert.match(message.html, sinon.match('background:#fff3ed'));
             sinon.assert.match(message.html, sinon.match('color:#bd460c'));
         });
@@ -247,6 +253,7 @@ describe('GiftEmailService', function () {
             await invalidColorService.sendGiftDelivery({
                 recipientEmail: 'recipient@example.com',
                 recipientName: 'Recipient',
+                buyerEmail: 'buyer@example.com',
                 buyerName: 'Buyer',
                 personalMessage: 'Enjoy this gift',
                 token: 'abc-123',
@@ -268,6 +275,7 @@ describe('GiftEmailService', function () {
             const result = await service.sendGiftDelivery({
                 recipientEmail: 'recipient@example.com',
                 recipientName: 'Recipient',
+                buyerEmail: 'buyer@example.com',
                 buyerName: 'Buyer',
                 personalMessage: 'Enjoy this gift',
                 token: 'abc-123',
@@ -299,6 +307,7 @@ describe('GiftEmailService', function () {
             await translatedService.sendGiftDelivery({
                 recipientEmail: 'recipient@example.com',
                 recipientName: null,
+                buyerEmail: 'buyer@example.com',
                 buyerName: 'Buyer',
                 personalMessage: null,
                 token: 'abc-123',
@@ -328,6 +337,7 @@ describe('GiftEmailService', function () {
             await service.sendGiftDelivery({
                 recipientEmail: 'recipient@example.com',
                 recipientName: '<img src=x onerror=alert(1)>',
+                buyerEmail: 'buyer@example.com',
                 buyerName: '<script>alert(1)</script>',
                 personalMessage: '<b>not markup</b>',
                 token: 'abc-123',
@@ -370,6 +380,7 @@ describe('GiftEmailService', function () {
             await literalService.sendGiftDelivery({
                 recipientEmail: 'recipient@example.com',
                 recipientName: 'Pat O\'Neil & Co',
+                buyerEmail: 'buyer@example.com',
                 buyerName: 'Sam & Alex <Team>',
                 personalMessage: null,
                 token: 'abc-123',
@@ -384,6 +395,7 @@ describe('GiftEmailService', function () {
             assert.equal(message.subject, 'Sam & Alex <Team> sent you a gift');
             assert.match(message.plaintext, /Hi Pat O'Neil & Co,/);
             assert.match(message.plaintext, /Sam & Alex <Team> has gifted you a 1-year Gold & Silver <Plus> membership to Research & <Notes>/);
+            assert.match(message.plaintext, /on behalf of Sam & Alex <Team> \(buyer@example.com\)\./);
             assert.doesNotMatch(message.plaintext, /&(amp|lt|gt|#39);/);
         });
 
@@ -393,7 +405,8 @@ describe('GiftEmailService', function () {
             await assert.rejects(service.sendGiftDelivery({
                 recipientEmail: 'recipient@example.com',
                 recipientName: null,
-                buyerName: null,
+                buyerEmail: 'buyer@example.com',
+                buyerName: 'Buyer',
                 personalMessage: null,
                 token: 'abc-123',
                 tierName: 'Gold',
@@ -412,7 +425,8 @@ describe('GiftEmailService', function () {
             await assert.rejects(service.sendGiftDelivery({
                 recipientEmail: 'recipient@example.com',
                 recipientName: null,
-                buyerName: null,
+                buyerEmail: 'buyer@example.com',
+                buyerName: 'Buyer',
                 personalMessage: null,
                 token: 'abc-123',
                 tierName: 'Gold',
