@@ -14,9 +14,12 @@ function hasStripeMetadataKey(metadata, key) {
     return Object.prototype.hasOwnProperty.call(metadata || {}, key);
 }
 
-function hasConflictingCheckoutFlowMetadata(metadata) {
-    const hasGift = hasStripeMetadataKey(metadata, 'ghost_gift') || hasStripeMetadataKey(metadata, 'ghost_gift_id');
-    return hasStripeMetadataKey(metadata, 'ghost_donation') && hasGift;
+function isGiftCheckoutSession(session) {
+    return Boolean(session.metadata?.ghost_gift_id) || isStripeMetadataTrue(session.metadata?.ghost_gift);
+}
+
+function hasConflictingCheckoutFlowMetadata(session) {
+    return hasStripeMetadataKey(session.metadata, 'ghost_donation') && isGiftCheckoutSession(session);
 }
 
 function getStripeResourceId(resource) {
@@ -72,10 +75,9 @@ module.exports = class CheckoutSessionEventService {
             return;
         }
 
-        const asyncPaymentSucceeded = eventType === 'checkout.session.async_payment_succeeded';
-        if (asyncPaymentSucceeded) {
-            if (session.mode === 'payment' && (session.metadata?.ghost_gift_id || isStripeMetadataTrue(session.metadata?.ghost_gift))) {
-                await this.handleGiftEvent(session);
+        if (eventType === 'checkout.session.async_payment_succeeded') {
+            if (session.mode === 'payment') {
+                await this.handlePaymentEvent(session, {giftOnly: true});
             }
             return;
         }
@@ -89,19 +91,34 @@ module.exports = class CheckoutSessionEventService {
         }
 
         if (session.mode === 'payment') {
-            if (hasConflictingCheckoutFlowMetadata(session.metadata)) {
-                logging.warn('Ignoring checkout session with conflicting payment flow metadata');
+            await this.handlePaymentEvent(session, {giftOnly: false});
+        }
+    }
+
+    /**
+     * Routes a `payment` mode session to the donation or gift handler. Gift purchases
+     * may complete asynchronously, so their handler only runs once Stripe reports the
+     * session as paid, whichever event carried it.
+     *
+     * @param {import('stripe').Stripe.Checkout.Session} session
+     * @param {{giftOnly: boolean}} options
+     */
+    async handlePaymentEvent(session, {giftOnly}) {
+        if (hasConflictingCheckoutFlowMetadata(session)) {
+            logging.warn('Ignoring checkout session with conflicting payment flow metadata');
+            return;
+        }
+
+        if (isGiftCheckoutSession(session)) {
+            if (session.payment_status !== 'paid') {
                 return;
             }
+            await this.handleGiftEvent(session);
+            return;
+        }
 
-            if (isStripeMetadataTrue(session.metadata?.ghost_donation)) {
-                await this.handleDonationEvent(session);
-            } else if (session.metadata?.ghost_gift_id || isStripeMetadataTrue(session.metadata?.ghost_gift)) {
-                if (session.payment_status !== 'paid') {
-                    return;
-                }
-                await this.handleGiftEvent(session);
-            }
+        if (!giftOnly && isStripeMetadataTrue(session.metadata?.ghost_donation)) {
+            await this.handleDonationEvent(session);
         }
     }
 

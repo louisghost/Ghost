@@ -129,6 +129,38 @@ describe('CheckoutSessionEventService', function () {
             sinon.assert.calledOnce(handleGiftEventStub);
         });
 
+        it('ignores async payment success for a gift that Stripe still reports as unpaid', async function () {
+            const service = createService();
+            const session = {mode: 'payment', payment_status: 'unpaid', metadata: {ghost_gift_id: 'gift_123'}};
+            const handleGiftEventStub = sinon.stub(service, 'handleGiftEvent');
+
+            await service.handleEvent(session, 'checkout.session.async_payment_succeeded');
+
+            sinon.assert.notCalled(handleGiftEventStub);
+        });
+
+        it('ignores async payment success with conflicting donation and gift markers', async function () {
+            const service = createService();
+            const session = {mode: 'payment', payment_status: 'paid', metadata: {ghost_donation: 'true', ghost_gift_id: 'gift_123'}};
+            const handleDonationEventStub = sinon.stub(service, 'handleDonationEvent');
+            const handleGiftEventStub = sinon.stub(service, 'handleGiftEvent');
+
+            await service.handleEvent(session, 'checkout.session.async_payment_succeeded');
+
+            sinon.assert.notCalled(handleDonationEventStub);
+            sinon.assert.notCalled(handleGiftEventStub);
+        });
+
+        it('does not handle donations on async payment success', async function () {
+            const service = createService();
+            const session = {mode: 'payment', payment_status: 'paid', metadata: {ghost_donation: 'true'}};
+            const handleDonationEventStub = sinon.stub(service, 'handleDonationEvent');
+
+            await service.handleEvent(session, 'checkout.session.async_payment_succeeded');
+
+            sinon.assert.notCalled(handleDonationEventStub);
+        });
+
         it('leaves failed async gift payments pending for retention cleanup', async function () {
             const service = createService();
             const handleGiftEventStub = sinon.stub(service, 'handleGiftEvent');
