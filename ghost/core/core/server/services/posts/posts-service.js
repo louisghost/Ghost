@@ -176,12 +176,22 @@ class PostsService {
                 });
             }
             for (const tag of data.meta.tags) {
-                if (typeof tag !== 'object') {
+                if (!tag || typeof tag !== 'object') {
                     throw new errors.IncorrectUsageError({
                         message: tpl(messages.invalidTags)
                     });
                 }
                 if (!tag.id && !tag.name) {
+                    throw new errors.IncorrectUsageError({
+                        message: tpl(messages.invalidTags)
+                    });
+                }
+                if (tag.id && typeof tag.id !== 'string') {
+                    throw new errors.IncorrectUsageError({
+                        message: tpl(messages.invalidTags)
+                    });
+                }
+                if (tag.name && typeof tag.name !== 'string') {
                     throw new errors.IncorrectUsageError({
                         message: tpl(messages.invalidTags)
                     });
