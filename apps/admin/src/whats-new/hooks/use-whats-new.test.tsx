@@ -1,7 +1,7 @@
 import { test as baseTest, describe, expect } from "vitest";
 import { renderHook, waitFor, act } from "@testing-library/react";
 import type { QueryClient } from "@tanstack/react-query";
-import { useWhatsNew, useDismissWhatsNew } from "./use-whats-new";
+import { useWhatsNew, useDismissWhatsNew, useInitializeWhatsNewPreferences } from "./use-whats-new";
 import { HttpResponse, http } from "msw";
 import { mockUser, createRawChangelogEntry } from "@test-utils/factories";
 import { waitForQuerySettled } from "@test-utils/test-helpers";
@@ -122,7 +122,12 @@ async function setupQuery(server: SetupServer, wrapper: TestWrapperComponent, op
         })
     );
 
-    const { result } = renderHook(() => useWhatsNew(), {
+    // The admin layout owns the initialising write and the readers sit under it,
+    // so compose them the same way here.
+    const { result } = renderHook(() => {
+        useInitializeWhatsNewPreferences();
+        return useWhatsNew();
+    }, {
         wrapper,
     });
 

@@ -1,7 +1,7 @@
 import { useQuery, useMutation, keepPreviousData, type UseQueryResult, type UseMutationResult, type UseQueryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import { useQueryClient } from "@tryghost/admin-x-framework";
-import { currentUserQueryKey, useCurrentUser } from "@tryghost/admin-x-framework/api/current-user";
+import { currentUserQueryKey, useCurrentUser, useFetchCurrentUser } from "@tryghost/admin-x-framework/api/current-user";
 import { useEditUser, type User, type UsersResponseType } from "@tryghost/admin-x-framework/api/users";
 import { isoDatetimeToDate } from "@/schemas/primitives";
 import { deepMerge, type DeepPartial } from "@/utils/deep-merge";
@@ -103,6 +103,7 @@ export const useEditUserPreferences = (): UseMutationResult<void, Error, DeepPar
     const queryClient = useQueryClient();
     const { data: user } = useCurrentUser();
     const { mutateAsync: editUser } = useEditUser();
+    const fetchCurrentUser = useFetchCurrentUser();
 
     return useMutation({
         // Preference edits write the whole accessibility blob from a merge of
@@ -110,9 +111,17 @@ export const useEditUserPreferences = (): UseMutationResult<void, Error, DeepPar
         // the later one merges on top of the earlier write instead of racing.
         scope: { id: "user-preferences" },
         mutationFn: async (updatedPreferences: DeepPartial<Preferences>) => {
-            // Read the user at run time (not from the render closure): a
-            // serialized mutation must merge on top of the previous write.
-            const latestUser = queryClient.getQueryData<UsersResponseType>(currentUserQueryKey)?.users[0] ?? user;
+            // Merge over the server's blob, not the cached one. Ember's feature
+            // and onboarding services write this same field, as does Admin in
+            // another tab, and the cached user is not refetched on mount or on
+            // window focus, so a merge over the cache silently reverts whatever
+            // those writers stored. Read around the cache: writing the pre-write
+            // user into it would flip the UI back until this write lands.
+            const serverUser = (await fetchCurrentUser()).users[0];
+
+            // Fall back to the cache, which a serialized mutation has already
+            // updated with the previous write, then the render closure.
+            const latestUser = serverUser ?? queryClient.getQueryData<UsersResponseType>(currentUserQueryKey)?.users[0] ?? user;
 
             if (!latestUser) {
                 throw new Error("User is not loaded");
@@ -122,8 +131,10 @@ export const useEditUserPreferences = (): UseMutationResult<void, Error, DeepPar
 
             const encodedForStorage = PreferencesSchema.encode(newPreferences);
 
+            // Send the blob alone: a whole-user payload built from a read taken
+            // moments ago would revert a name or a role changed in between.
             await editUser({
-                ...latestUser,
+                id: latestUser.id,
                 accessibility: JSON.stringify(encodedForStorage),
             });
         },

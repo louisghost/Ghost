@@ -22,14 +22,19 @@ interface WhatsNewData {
 const whatsNewQueryKey = (preferences: Preferences | undefined, latestEntry: ChangelogEntry | undefined) =>
     ["whatsNew", preferences?.whatsNew?.lastSeenDate?.toISOString(), latestEntry?.publishedAt.toISOString()] as const;
 
-export const useWhatsNew = (): UseQueryResult<WhatsNewData> => {
+/**
+ * Stores today as the last seen date for a user who has none, so entries
+ * published before they arrived never read as new.
+ *
+ * Belongs to a single caller (the admin layout). Reading hooks must not do this:
+ * every mounted consumer would queue its own write of the whole preferences blob.
+ */
+export const useInitializeWhatsNewPreferences = (): void => {
     const { data: preferences, isSuccess: isPreferencesLoaded } = useUserPreferences();
-    const { data: changelog, isSuccess: isChangelogLoaded } = useChangelog();
     const { mutateAsync: updatePreferences } = useEditUserPreferences();
 
     const hasWhatsNewPreferences = !!preferences?.whatsNew?.lastSeenDate;
 
-    // Initialize default whatsNewPreferences if missing or invalid
     useEffect(() => {
         if (!hasWhatsNewPreferences && isPreferencesLoaded) {
             void updatePreferences({
@@ -37,6 +42,13 @@ export const useWhatsNew = (): UseQueryResult<WhatsNewData> => {
             });
         }
     }, [hasWhatsNewPreferences, isPreferencesLoaded, updatePreferences]);
+};
+
+export const useWhatsNew = (): UseQueryResult<WhatsNewData> => {
+    const { data: preferences } = useUserPreferences();
+    const { data: changelog, isSuccess: isChangelogLoaded } = useChangelog();
+
+    const hasWhatsNewPreferences = !!preferences?.whatsNew?.lastSeenDate;
 
     const latestEntry = changelog?.entries[0];
 
@@ -48,7 +60,7 @@ export const useWhatsNew = (): UseQueryResult<WhatsNewData> => {
             }
 
             // Safe to assert non-null because query is only enabled when hasWhatsNewPreferences is true,
-            // and useEffect ensures whatsNew is initialized with a valid lastSeenDate
+            // and useInitializeWhatsNewPreferences stores a valid lastSeenDate
             const lastSeenDate = preferences!.whatsNew!.lastSeenDate!;
 
             const hasNew = latestEntry.publishedAt > lastSeenDate;

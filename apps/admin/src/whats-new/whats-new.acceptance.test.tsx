@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
     changelogEntry,
     currentUserResponse,
-    fakeAdminEndpoint,
     fakeEndpoint,
+    fakePreferenceEdits,
     fakeTags,
     renderAdminApp,
     type CurrentUserResponse,
@@ -58,8 +58,7 @@ describe("What's new banner", () => {
         fakeEndpoint("GET", "https://ghost.org/changelog.json", {
             posts: [changelogEntry({ published_at: NEWER_THAN_LAST_SEEN })],
         });
-        // Echo the PUT so the client's write persists (see boot.ts's editUserPreferences).
-        const prefsApi = fakeAdminEndpoint("PUT", /^\/users\/\w+\//, ({ body }) => body);
+        const prefsApi = fakePreferenceEdits();
         await renderAdminApp("/tags", {
             boot: { browseMe: { response: userWhoLastSawChangelogAt(LAST_SEEN) } },
         });
@@ -139,6 +138,22 @@ describe("What's new menu", () => {
         await expect.element(whatsNewScreen.menuBadge()).not.toBeInTheDocument();
         await expect.element(whatsNewScreen.avatarBadge()).not.toBeInTheDocument();
         await expect.element(whatsNewScreen.banner()).not.toBeInTheDocument();
+    });
+
+    it("stores the initial last seen date with one write, not one per reader", async () => {
+        // The banner, the user menu and the sidebar badge all read this state.
+        const preferenceEdits = fakePreferenceEdits();
+        fakeTags([]);
+        await renderAdminApp("/tags");
+
+        await expect.element(tagsScreen.emptyStateHeading()).toBeVisible();
+        await expect.poll(() => preferenceEdits.requests.length).toBe(1);
+
+        // Open the menu so every reader has mounted, then confirm none of them
+        // queued a write of their own.
+        await sidebarScreen.userMenuTrigger().click();
+        await expect.element(whatsNewScreen.menuItem()).toBeVisible();
+        expect(preferenceEdits.requests).toHaveLength(1);
     });
 
     it("clears the banner and badges when the What's new modal is opened", async () => {
